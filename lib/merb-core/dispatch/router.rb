@@ -53,10 +53,11 @@ module Merb
       # Looks up route by name and generates URL using
       # given parameters. Raises GenerationError if
       # passed parameters do not match those of route.
-      def generate(name, params)
+      def generate(name, *args)
         unless route = @@named_routes[name.to_sym]
           raise GenerationError, "Named route not found: #{name}"
         end
+        params = Hash === args.last ? args.last : { :id => args.last }
         route.generate(params) or raise GenerationError, "Named route #{name} could not be generated with #{params.inspect}"
       end
 
@@ -85,7 +86,7 @@ module Merb
 
           @@statement =  "def match(request)\n"
           @@statement << condition_keys.inject("") do |cached, key|
-            cached << "  cached_#{key} = request.#{key}\n"
+            cached << "  cached_#{key} = request.#{key}.to_s\n"
           end
           @@statement <<    if_statements
           @@statement << "  else\n"

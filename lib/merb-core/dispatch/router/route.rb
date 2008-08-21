@@ -61,6 +61,10 @@ module Merb
         raise ArgumentError.new("Route names must be symbols") unless Symbol === (@symbol = symbol)
         Merb::Router.named_routes[@symbol] = self
       end
+      
+      def variables
+        @variables ||= @segments.flatten.select { |s| Hash === s }
+      end
 
       # This is a temporary implementation to get the specs to pass
       def generate(params = {})
@@ -128,12 +132,42 @@ module Merb
               segment.all? { |s| String === s }
           elsif Symbol === segment
             query_params.delete(segment)
-            params[segment]
+            value = params[segment]
+            # --- Pretty much a carry over from the old router ---
+            value.respond_to?(:to_param) ? value.to_param : value.to_s
           else
             segment
           end
         end.join
       end
+      
+      # The old bit that converted objects for the segment
+      # ---
+      # value =
+      #   if segment.is_a? Symbol
+      #     if params.is_a? Hash
+      #       if segment.to_s =~ /_id/ && params[:id].respond_to?(segment)
+      #         params[segment] = params[:id].send(segment)
+      #       end
+      #       query_params.delete segment
+      #       params[segment] || fallback[segment]
+      #     else
+      #       if segment == :id && params.respond_to?(:to_param)
+      #         params.to_param
+      #       elsif segment == :id && params.is_a?(Fixnum)
+      #         params
+      #       elsif params.respond_to?(segment)
+      #         params.send(segment)
+      #       else
+      #         fallback[segment]
+      #       end
+      #     end
+      #   elsif segment.respond_to? :to_s
+      #     segment
+      #   else
+      #     raise "Segment type '#{segment.class}' can't be converted to a string"
+      #   end
+      # (value.respond_to?(:to_param) ? value.to_param : value).to_s.unescape_regexp
 
     # === Compilation ===
 

@@ -12,16 +12,3 @@ describe Merb::Router do
 
 
 end
-
-__END__
-# These are all out of date
-describe "Merb::Router" do
-  
-  it "should work when no routes were defined" do
-    pending "This doesn't work yet" do
-      Merb::Router.prepare { |r| }
-      route_to("/hello/world").should be_empty
-    end
-  end
-  
-end

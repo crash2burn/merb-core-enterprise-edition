@@ -31,6 +31,10 @@ describe "When generating URLs," do
     it "should generate a URL with a paramter passed for the variable" do
       url(:welcome, :account => "walruses").should == "/walruses/welcome"
     end
+    
+    it "should generate with a blank parameter" do
+      url(:welcome, :account => "").should == "//welcome"
+    end
 
     it "should append any extra parameters to the query string" do
       url(:welcome, :account => "seagulls", :like_walruses => "true").should == "/seagulls/welcome?like_walruses=true"
@@ -38,6 +42,10 @@ describe "When generating URLs," do
 
     it "should raise an error if no parameters are passed" do
       lambda { url(:welcome) }.should raise_error(Merb::Router::GenerationError)
+    end
+    
+    it "should raise an error if a nil parameter is passed" do
+      lambda { url(:welcome, :account => nil) }.should raise_error(Merb::Router::GenerationError)
     end
 
     it "should raise an error if parameters are passed without :account" do
