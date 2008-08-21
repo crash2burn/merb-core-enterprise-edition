@@ -1,199 +1,100 @@
 require 'merb-core/dispatch/router/cached_proc'
 require 'merb-core/dispatch/router/behavior'
+require 'merb-core/dispatch/router/resources'
 require 'merb-core/dispatch/router/route'
-require 'merb-core/controller/mixins/responder'
-module Merb
-  # Router stores route definitions and finds first
-  # that matches incoming request URL.
-  #
-  # Then information from route is used by dispatcher to
-  # call action on the controller.
-  #
-  # ==== Routes compilation.
-  #
-  # Most interesting method of Router (and heart of
-  # route matching machinery) is match method generated
-  # on fly from routes definitions. It is called routes
-  # compilation. Generated match method body contains
-  # one if/elsif statement that picks first matching route
-  # definition and sets values to named parameters of the route.
-  #
-  # Compilation is synchronized by mutex.
-  class Router
-    SEGMENT_REGEXP = /(:([a-z_][a-z0-9_]*|:))/
-    SEGMENT_REGEXP_WITH_BRACKETS = /(:[a-z_]+)(\[(\d+)\])?/
-    JUST_BRACKETS = /\[(\d+)\]/
-    PARENTHETICAL_SEGMENT_STRING = "([^\/.,;?]+)".freeze
 
-    @@named_routes = {}
+module Merb
+  
+  class Router
     @@routes = []
+    @@named_routes = {}
     @@compiler_mutex = Mutex.new
+
+    # Raised when route lookup fails.
+    class RouteNotFound < StandardError; end;
+    # Raised when parameters given to generation
+    # method do not match route parameters.
+    class GenerationError < StandardError; end;
+    class NotCompiledError < StandardError; end;
+
     cattr_accessor :routes, :named_routes
 
     class << self
-      # Finds route matching URI of the request and
-      # returns a tuple of [route index, route params].
-      #
-      # ==== Parameters
-      # request<Merb::Request>:: request to match.
-      #
-      # ==== Returns
-      # <Array(Integer, Hash)::
-      #   Two-tuple: route index and route parameters. Route
-      #   parameters are :controller, :action and all the named
-      #   segments of the route.
-      def route_for(request)
-        index, params = match(request)
-        route = routes[index] if index
-        if !route
-          raise ControllerExceptions::NotFound, 
-            "No routes match the request: #{request.uri}"
-        end
-        [route, params]
-      end
-      
-      # Clear all routes.
+      # Clears routes table.
       def reset!
+        class << self
+          alias_method :match, :match_before_compilation
+        end
         self.routes, self.named_routes = [], {}
       end
 
-      # Appends the generated routes to the current routes.
-      #
-      # ==== Parameters
-      # &block::
-      #   A block that generates new routes when yielded a new Behavior.
+      # Appends route in the block to routing table.
       def append(&block)
-        prepare(@@routes, [], &block)
+        prepare(routes, [], &block)
       end
 
-      # Prepends the generated routes to the current routes.
-      #
-      # ==== Parameters
-      # &block::
-      #   A block that generates new routes when yielded a new Behavior.
+      # Prepends routes in the block to routing table.
       def prepend(&block)
-        prepare([], @@routes, &block)
+        prepare([], routes, &block)
       end
 
-      # Prepares new routes and adds them to existing routes.
+      # Yields router scope to the block and inserts resulting routes
+      # between +first+ and +last+ in resulting routing table.
       #
-      # ==== Parameters
-      # first<Array>:: An array of routes to add before the generated routes.
-      # last<Array>:: An array of routes to add after the generated routes.
-      # &block:: A block that generates new routes.
-      #
-      # ==== Block parameters (&block)
-      # new_behavior<Behavior>:: Behavior for child routes.
+      # Compiles routes after block evaluation.
       def prepare(first = [], last = [], &block)
-        @@routes = []
-        yield Behavior.new({}, { :action => 'index' }) # defaults
-        @@routes = first + @@routes + last
+        self.routes = []
+        yield Behavior.new({}, {}, {:action => "index"})
+        self.routes = first + routes + last
         compile
+        self
       end
 
-      # Capture any new routes that have been added within the block.
-      #
-      # This utility method lets you track routes that have been added;
-      # it doesn't affect how/which routes are added.
-      #
-      # &block:: A context in which routes are generated.
-      def capture(&block)
-        routes_before, named_route_keys_before = self.routes.dup, self.named_routes.keys
-        yield
-        [self.routes - routes_before, self.named_routes.except(*named_route_keys_before)]
+      # Looks up route by name and generates URL using
+      # given parameters. Raises GenerationError if
+      # passed parameters do not match those of route.
+      def generate(name, params)
+        unless route = @@named_routes[name.to_sym]
+          raise GenerationError, "Named route not found: #{name}"
+        end
+        route.generate(params) or raise GenerationError, "Named route #{name} could not be generated with #{params.inspect}"
       end
 
-      # ==== Returns
-      # String:: A routing lambda statement generated from the routes.
+      # Defines method with a switch statement that does routes recognition.
+      def compile
+        eval(compiled_statement, binding, "Generated Code for Merb::Router#match(#{__FILE__}:#{__LINE__})", 1)
+      end
+
+      def match_before_compilation(request)
+        raise NotCompiledError, "The routes have not been compiled yet"
+      end
+
+      alias_method :match, :match_before_compilation
+
+    private
+
+      # Generates method that does route recognition with a switch statement.
       def compiled_statement
         @@compiler_mutex.synchronize do
-          @@compiled_statement = "def match(request)\n"
-          @@compiled_statement << "  params = request.params\n"
-          @@compiled_statement << "  cached_path = request.path\n  cached_method = request.method.to_s\n  "
-          @@routes.each_with_index { |route, i| @@compiled_statement << route.compile(i == 0) }
-          @@compiled_statement << "  else\n    [nil, {}]\n"
-          @@compiled_statement << "  end\n"
-          @@compiled_statement << "end"
+          condition_keys, if_statements = Set.new, ""
+
+          routes.each_with_index do |route, i|
+            route.conditions.keys.each { |key| condition_keys << key }
+            if_statements << route.compiled_statement(i == 0)
+          end
+
+          @@statement =  "def match(request)\n"
+          @@statement << condition_keys.inject("") do |cached, key|
+            cached << "  cached_#{key} = request.#{key}\n"
+          end
+          @@statement <<    if_statements
+          @@statement << "  else\n"
+          @@statement << "    [nil, {}]\n"
+          @@statement << "  end\n"
+          @@statement << "end"
         end
       end
 
-      # Defines the match function for this class based on the
-      # compiled_statement.
-      def compile
-        puts "compiled route: #{compiled_statement}" if $DEBUG
-        eval(compiled_statement, binding, "Generated Code for Router#match(#{__FILE__}:#{__LINE__})", 1)
-      end
-
-      # Generates a URL based on passed options.
-      #
-      # ==== Parameters
-      # name<~to_sym, Hash>:: The name of the route to generate.
-      # params<Hash, Fixnum, Object>:: The params to use in the route generation.
-      # fallback<Hash>:: Parameters for generating a fallback URL.
-      #
-      # ==== Returns
-      # String:: The generated URL.
-      #
-      # ==== Alternatives
-      # If name is a hash, it will be merged with params and passed on to
-      # generate_for_default_route along with fallback.
-      def generate(name, params = {}, fallback = {})
-        params.reject! { |k,v| v.nil? } if params.is_a? Hash
-        if name.is_a? Hash
-          name.reject! { |k,v| v.nil? }
-          return generate_for_default_route(name.merge(params), fallback)
-        end
-        name = name.to_sym
-        unless @@named_routes.key? name
-          raise "Named route not found: #{name}"
-        else
-          @@named_routes[name].generate(params, fallback)
-        end
-      end
-
-      # Generates a URL based on the default route scheme of
-      # "/:controller/:action/:id.:format".
-      #
-      # ==== Parameters
-      # params<Hash>::
-      #   The primary parameters to create the route from (see below).
-      # fallback<Hash>:: Fallback parameters. Same options as params.
-      #
-      # ==== Options (params)
-      # :controller<~to_s>:: The controller name. Required.
-      # :action<~to_s>:: The action name. Required.
-      # :id<~to_s>:: The ID for use in the action.
-      # :format<~to_s>:: The format of the preferred response.
-      #
-      # ==== Returns
-      # String:: The generated URL.
-      def generate_for_default_route(params, fallback)
-        query_params = params.reject do |k,v|
-          [:controller, :action, :id, :format].include?(k.to_sym)
-        end
-
-        controller = params[:controller] || fallback[:controller]
-        raise "Controller Not Specified" unless controller
-        url = "/#{controller}"
-
-        if params[:action] || params[:id] || params[:format] || !query_params.empty?
-          action = params[:action] || fallback[:action]
-          raise "Action Not Specified" unless action
-          url += "/#{action}"
-        end
-        if params[:id]
-          url += "/#{params[:id]}"
-        end
-        if format = params[:format]
-          format = fallback[:format] if format == :current
-          url += ".#{format}"
-        end
-        unless query_params.empty?
-          url += "?" + Merb::Request.params_to_query_string(query_params)
-        end
-        url
-      end
-    end # self
-
+    end # class << self
   end
 end

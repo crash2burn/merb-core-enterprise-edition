@@ -1,83 +1,28 @@
 module Merb
-
   class Router
-
-    # The Behavior class is an interim route-building class that ties
-    # pattern-matching +conditions+ to output parameters, +params+.
-    #---
-    # @public
+    #
+    # Behavior has been refactored so that it's only purpose is to describe routes.
+    #
+    # As of now, it collects only two things: conditions and params. When a new
+    # condition or param has the same key as an older one, the new one overwrites
+    # the old one. This is true for all cases EXCEPT conditions[:path].
+    #
+    # When nesting behaviors, conditions[:path] is appended to. I didn't want to
+    # handle any of of the logic of joining strings with other strings and
+    # regular expressions in Behavior, so I store conditions[:path] as an Array.
+    # Everytime a new condition[:path] is defined, it is appended to the Array.
+    # All the logic to merge the elements of the Array is in Route.
     class Behavior
-      attr_reader :placeholders, :conditions, :params, :redirect_url, :redirect_status
-      attr_accessor :parent
-      @@parent_resources = []
-      class << self
 
-        # ==== Parameters
-        # string<String>:: The string in which to count parentheses.
-        # pos<Fixnum>:: The last character for counting.
-        #
-        # ==== Returns
-        # Fixnum::
-        #   The number of open parentheses in string, up to and including pos.
-        def count_parens_up_to(string, pos)
-          string[0..pos].gsub(/[^\(]/, '').size
-        end
+      class Error < StandardError; end;
 
-        # ==== Parameters
-        # string1<String>:: The string to concatenate with.
-        # string2<String>:: The string to concatenate.
-        #
-        # ==== Returns
-        # String:: the concatenated string with regexp end caps removed.
-        def concat_without_endcaps(string1, string2)
-          return nil if !string1 and !string2
-          return string1 if string2.nil?
-          return string2 if string1.nil?
-          s1 = string1[-1] == ?$ ? string1[0..-2] : string1
-          s2 = string2[0] == ?^ ? string2[1..-1] : string2
-          s1 + s2
-        end
+      def initialize(conditions = {}, params = {}, defaults = {}, options = {})
+        @conditions = conditions
+        @params     = params
+        @defaults   = defaults
+        @options    = options
 
-        # ==== Parameters
-        # arr<Array>:: The array to convert to a code string.
-        #
-        # ==== Returns
-        # String::
-        #   The arr's elements converted to string and joined with " + ", with
-        #   any string elements surrounded by quotes.
-        def array_to_code(arr)
-          code = ''
-          arr.each_with_index do |part, i|
-            code << ' + ' if i > 0
-            case part
-            when Symbol
-              code << part.to_s
-            when String
-              code << %{"#{part}"}
-            else
-              raise "Don't know how to compile array part: #{part.class} [#{i}]"
-            end
-          end
-          code
-        end
-      end # class << self
-
-      # ==== Parameters
-      # conditions<Hash>::
-      #   Conditions to be met for this behavior to take effect.
-      # params<Hash>::
-      #   Hash describing the course action to take (Behavior) when the
-      #   conditions match. The values of the +params+ keys must be Strings.
-      # parent<Behavior, Nil>::
-      #   The parent of this Behavior. Defaults to nil.
-      def initialize(conditions = {}, params = {}, parent = nil)
-        # Must wait until after deducing placeholders to set @params !
-        @conditions, @params, @parent = conditions, {}, parent
-        @placeholders = {}
-        stringify_conditions
-        copy_original_conditions
-        deduce_placeholders
-        @params.merge! params
+        stringify_condition_values
       end
 
       # Register a new route.
@@ -159,44 +104,15 @@ module Merb
       #   end
       #---
       # @public
-      def match(path = '', conditions = {}, &block)
-        if path.is_a? Hash
-          conditions = path
-        else
-          conditions[:path] = path
-        end
-        match_without_path(conditions, &block)
-      end
+      def match(path = {}, conditions = {}, &block)
+        path, conditions = path[:path], path if Hash === path
+        conditions[:path] = merge_paths(path)
 
-      # Generates a new child behavior without the path if the path matches
-      # an empty string. Yields the new behavior to a block.
-      #
-      # ==== Parameters
-      # conditions<Hash>:: Optional conditions to pass to the new route.
-      #
-      # ==== Block parameters
-      # new_behavior<Behavior>:: The child behavior.
-      #
-      # ==== Returns
-      # Behavior:: The new behavior.
-      def match_without_path(conditions = {})
-        params = conditions.delete(:params) || {} #parents params will be merged  in Route#new
-        params[:controller] = conditions.delete(:controller) if conditions[:controller]
-        params[:action] = conditions.delete(:action) if conditions[:action]
-        new_behavior = self.class.new(conditions, params, self)
-        yield new_behavior if block_given?
-        new_behavior
-      end
+        raise Error, "The route has already been committed. Further conditions cannot be specified" if @route
 
-      # ==== Parameters
-      # params<Hash>:: Optional additional parameters for generating the route.
-      # &conditional_block:: A conditional block to be passed to Route.new.
-      #
-      # ==== Returns
-      # Route:: A new route based on this behavior.
-      def to_route(params = {}, &conditional_block)
-        @params.merge! params
-        Route.new compiled_conditions, compiled_params, self, &conditional_block
+        behavior = self.class.new(@conditions.merge(conditions), @params, @defaults, @options)
+        yield behavior if block_given?
+        behavior
       end
 
       # Combines common case of match being used with
@@ -212,7 +128,49 @@ module Merb
       #
       # r.match!("/api/:token/:controller/:action/:id").to({})
       def match!(path = '', conditions = {}, &block)
-        self.match(path, conditions, &block).to({})
+        match(path, conditions, &block).to({})
+      end
+
+      def to_route(params = {}, &conditional_block)
+        params = @params.merge(params)
+
+        raise Error, "The route has already been committed." if @route
+
+        # I'm not sure if this is the best way to implement namespaces. Maybe
+        # the namespace should be passed to Route and Route handles it however.
+        if @options[:controller_prefix]
+          controller = params[:controller] || ":controller"
+          params[:controller] = (@options[:controller_prefix] + [controller]).compact.join('/')
+        end
+
+        @route = Route.new(@conditions, params, :defaults => @defaults, &conditional_block)
+        self
+      end
+
+      def fixatable(enable = true)
+        @route.fixatable(enable)
+        self
+      end
+
+      def register
+        @route.register
+        self
+      end
+
+      def name(prefix, symbol = nil)
+        unless symbol
+          symbol, prefix = prefix, nil
+        end
+
+        name = [prefix, @options[:name_prefix], symbol].flatten.compact.join('_')
+        @route.name(name.intern)
+
+        self
+      end
+
+      def full_name(symbol)
+        @route.name(symbol)
+        self
       end
 
       # Creates a Route from one or more Behavior objects, unless a +block+ is
@@ -240,13 +198,33 @@ module Merb
       #---
       # @public
       def to(params = {}, &block)
+        raise Error, "The route has already been committed. Further params cannot be specified" if @route
+
         if block_given?
-          new_behavior = self.class.new({}, params, self)
-          yield new_behavior if block_given?
-          new_behavior
+          behavior = self.class.new(@conditions, @params.merge(params), @defaults, @options)
+          yield behavior if block_given?
+          behavior
         else
           to_route(params).register
         end
+      end
+
+      def defaults(defaults = {}, &block)
+        behavior = self.class.new(@conditions, @params, @defaults.merge(defaults), @options)
+        yield behavior if block_given?
+        behavior
+      end
+
+      def options(opts = {}, &block)
+        options = @options.dup
+
+        opts.each_pair do |key, value|
+          options[key] = (options[key] || []) + [value.freeze]
+        end
+
+        behavior = self.class.new(@conditions, @params, @defaults, options)
+        yield behavior if block_given?
+        behavior
       end
 
       # Takes a block and stores it for deferred conditional routes. The block
@@ -302,7 +280,7 @@ module Merb
       #---
       # @public
       def default_routes(params = {}, &block)
-        match(%r{/:controller(/:action(/:id)?)?(\.:format)?}).to(params, &block)
+        match("/:controller(/:action(/:id))(.:format)").to(params, &block).name(:default)
       end
 
       # Creates a namespace for a route. This way you can have logical
@@ -329,539 +307,45 @@ module Merb
       #   end
       #---
       # @public
-      def namespace(name_or_path, options={}, &block)
-        path = options[:path] || name_or_path.to_s
-        (path.empty? ? self : match("/#{path}")).to(:namespace => name_or_path.to_s) do |r|
-          yield r
-        end
-      end
+      def namespace(name_or_path, opts = {}, &block)
+        name = name_or_path.to_s # We don't want this modified ever
+        path = opts[:path] || name
 
-      # Behavior#+resources+ is a route helper for defining a collection of
-      # RESTful resources. It yields to a block for child routes.
-      #
-      # ==== Parameters
-      # name<String, Symbol>:: The name of the resources
-      # options<Hash>::
-      #   Ovverides and parameters to be associated with the route
-      #
-      # ==== Options (options)
-      # :namespace<~to_s>: The namespace for this route.
-      # :name_prefix<~to_s>:
-      #   A prefix for the named routes. If a namespace is passed and there
-      #   isn't a name prefix, the namespace will become the prefix.
-      # :controller<~to_s>: The controller for this route
-      # :collection<~to_s>: Special settings for the collections routes
-      # :member<Hash>:
-      #   Special settings and resources related to a specific member of this
-      #   resource.
-      # :keys<Array>:
-      #   A list of the keys to be used instead of :id with the resource in the order of the url.
-      #
-      # ==== Block parameters
-      # next_level<Behavior>:: The child behavior.
-      #
-      # ==== Returns
-      # Array::
-      #   Routes which will define the specified RESTful collection of resources
-      #
-      # ==== Examples
-      #
-      #  r.resources :posts # will result in the typical RESTful CRUD
-      #    # lists resources
-      #    # GET     /posts/?(\.:format)?      :action => "index"
-      #    # GET     /posts/index(\.:format)?  :action => "index"
-      #
-      #    # shows new resource form
-      #    # GET     /posts/new                :action => "new"
-      #
-      #    # creates resource
-      #    # POST    /posts/?(\.:format)?,     :action => "create"
-      #
-      #    # shows resource
-      #    # GET     /posts/:id(\.:format)?    :action => "show"
-      #
-      #    # shows edit form
-      #    # GET     /posts/:id/edit        :action => "edit"
-      #
-      #    # updates resource
-      #    # PUT     /posts/:id(\.:format)?    :action => "update"
-      #
-      #    # shows deletion confirmation page
-      #    # GET     /posts/:id/delete      :action => "delete"
-      #
-      #    # destroys resources
-      #    # DELETE  /posts/:id(\.:format)?    :action => "destroy"
-      #
-      #  # Nesting resources
-      #  r.resources :posts do |posts|
-      #    posts.resources :comments
-      #  end
-      #---
-      # @public
-      def resources(name, options = {})
-        namespace = options[:namespace] || merged_params[:namespace]
+        raise Error, "The route has already been committed. Further options cannot be specified" if @route
 
-        next_level = match "/#{name}"
+        # option keys could be nil
+        opts[:controller_prefix] = name unless opts.has_key?(:controller_prefix)
+        opts[:name_prefix]       = name unless opts.has_key?(:name_prefix)
 
-        name_prefix = options.delete :name_prefix
-        matched_keys =  options[:keys] ? options.delete(:keys).map{|k| ":#{k}"}.join("/")  : ":id"
-
-        if name_prefix.nil? && !namespace.nil?
-          name_prefix = namespace_to_name_prefix namespace
-        end
-
-        unless @@parent_resources.empty?
-          parent_resource = namespace_to_name_prefix @@parent_resources.join('_')
-        end
-
-        options[:controller] ||= merged_params[:controller] || name.to_s
-
-        singular = name.to_s.singularize
-
-        route_plural_name   = "#{name_prefix}#{parent_resource}#{name}"
-        route_singular_name = "#{name_prefix}#{parent_resource}#{singular}"
-
-        behaviors = []
-
-        if member = options.delete(:member)
-          member.each_pair do |action, methods|
-            behaviors << Behavior.new(
-            { :path => %r{^/#{matched_keys}/#{action}(\.:format)?$}, :method => /^(#{[methods].flatten * '|'})$/ },
-            { :action => action.to_s }, next_level
-            )
-            next_level.match("/#{matched_keys}/#{action}").to_route.name(:"#{action}_#{route_singular_name}")
-          end
-        end
-
-        if collection = options.delete(:collection)
-          collection.each_pair do |action, methods|
-            behaviors << Behavior.new(
-            { :path => %r{^/#{action}(\.:format)?$}, :method => /^(#{[methods].flatten * '|'})$/ },
-            { :action => action.to_s }, next_level
-            )
-            next_level.match("/#{action}").to_route.name(:"#{action}_#{route_plural_name}")
-          end
-        end
-
-        routes = many_behaviors_to(behaviors + next_level.send(:resources_behaviors, matched_keys), options)
-
-
-
-        # Add names to some routes
-        [['', :"#{route_plural_name}"],
-        ["/#{matched_keys}", :"#{route_singular_name}"],
-        ['/new', :"new_#{route_singular_name}"],
-        ["/#{matched_keys}/edit", :"edit_#{route_singular_name}"],
-        ["/#{matched_keys}/delete", :"delete_#{route_singular_name}"]
-        ].each do |path,name|
-          next_level.match(path).to_route.name(name)
-        end
-
-
-        parent_keys = (matched_keys == ":id") ? ":#{singular}_id" : matched_keys
-        if block_given?
-          @@parent_resources.push(singular)
-          yield next_level.match("/#{parent_keys}")
-          @@parent_resources.pop
-        end
-
-        routes
-      end
-
-      # Behavior#+resource+ is a route helper for defining a singular RESTful
-      # resource. It yields to a block for child routes.
-      #
-      # ==== Parameters
-      # name<String, Symbol>:: The name of the resource.
-      # options<Hash>::
-      #   Overides and parameters to be associated with the route.
-      #
-      # ==== Options (options)
-      # :namespace<~to_s>: The namespace for this route.
-      # :name_prefix<~to_s>:
-      #   A prefix for the named routes. If a namespace is passed and there
-      #   isn't a name prefix, the namespace will become the prefix.
-      # :controller<~to_s>: The controller for this route
-      #
-      # ==== Block parameters
-      # next_level<Behavior>:: The child behavior.
-      #
-      # ==== Returns
-      # Array:: Routes which define a RESTful single resource.
-      #
-      # ==== Examples
-      #
-      #  r.resource :account # will result in the typical RESTful CRUD
-      #    # shows new resource form      
-      #    # GET     /account/new                :action => "new"
-      #
-      #    # creates resource      
-      #    # POST    /account/?(\.:format)?,     :action => "create"
-      #
-      #    # shows resource      
-      #    # GET     /account/(\.:format)?       :action => "show"
-      #
-      #    # shows edit form      
-      #    # GET     /account//edit           :action => "edit"
-      #
-      #    # updates resource      
-      #    # PUT     /account/(\.:format)?       :action => "update"
-      #
-      #    # shows deletion confirmation page      
-      #    # GET     /account//delete         :action => "delete"
-      #
-      #    # destroys resources      
-      #    # DELETE  /account/(\.:format)?       :action => "destroy"
-      #
-      # You can optionally pass :namespace and :controller to refine the routing
-      # or pass a block to nest resources.
-      #
-      #   r.resource :account, :namespace => "admin" do |account|
-      #     account.resources :preferences, :controller => "settings"
-      #   end
-      # ---
-      # @public
-      def resource(name, options = {})
-        namespace  = options[:namespace] || merged_params[:namespace]
-
-        next_level = match "/#{name}"
-
-        options[:controller] ||= merged_params[:controller] || name.to_s
-
-        # Do not pass :name_prefix option on to to_resource
-        name_prefix = options.delete :name_prefix
-
-        if name_prefix.nil? && !namespace.nil?
-          name_prefix = namespace_to_name_prefix namespace
-        end
-
-        unless @@parent_resources.empty?
-          parent_resource = namespace_to_name_prefix @@parent_resources.join('_')
-        end
-
-        routes = next_level.to_resource options
-
-        route_name = "#{name_prefix}#{name}"
-
-        next_level.match('').to_route.name(:"#{route_name}")
-        next_level.match('/new').to_route.name(:"new_#{route_name}")
-        next_level.match('/edit').to_route.name(:"edit_#{route_name}")
-        next_level.match('/delete').to_route.name(:"delete_#{route_name}")
-
-        if block_given?
-          @@parent_resources.push(route_name)
-          yield next_level
-          @@parent_resources.pop
-        end
-
-        routes
-      end
-
-      # ==== Parameters
-      # params<Hash>:: Optional params for generating the RESTful routes.
-      # &block:: Optional block for the route generation.
-      #
-      # ==== Returns
-      # Array:: Routes matching the RESTful resource.
-      def to_resources(params = {}, &block)
-        many_behaviors_to resources_behaviors, params, &block
-      end
-
-      # ==== Parameters
-      # params<Hash>:: Optional params for generating the RESTful routes.
-      # &block:: Optional block for the route generation.
-      #
-      # ==== Returns
-      # Array:: Routes matching the RESTful singular resource.
-      def to_resource(params = {}, &block)
-        many_behaviors_to resource_behaviors, params, &block
-      end
-
-      # ==== Returns
-      # Hash::
-      #   The original conditions of this behavior merged with the original
-      #   conditions of all its ancestors.
-      def merged_original_conditions
-        if parent.nil?
-          @original_conditions
-        else
-          merged_so_far = parent.merged_original_conditions
-          if path = Behavior.concat_without_endcaps(merged_so_far[:path], @original_conditions[:path])
-            merged_so_far.merge(@original_conditions).merge(:path => path)
-          else
-            merged_so_far.merge(@original_conditions)
-          end
-        end
-      end
-
-      # ==== Returns
-      # Hash::
-      #   The conditions of this behavior merged with the conditions of all its
-      #   ancestors.
-      def merged_conditions
-        if parent.nil?
-          @conditions
-        else
-          merged_so_far = parent.merged_conditions
-          if path = Behavior.concat_without_endcaps(merged_so_far[:path], @conditions[:path])
-            merged_so_far.merge(@conditions).merge(:path => path)
-          else
-            merged_so_far.merge(@conditions)
-          end
-        end
-      end
-
-      # ==== Returns
-      # Hash::
-      #   The params of this behavior merged with the params of all its
-      #   ancestors.
-      def merged_params
-        if parent.nil?
-          @params
-        else
-          parent.merged_params.merge(@params)
-        end
-      end
-
-      # ==== Returns
-      # Hash::
-      #   The route placeholders, e.g. :controllers, of this behavior merged
-      #   with the placeholders of all its ancestors.
-      def merged_placeholders
-        placeholders = {}
-        (ancestors.reverse + [self]).each do |a|
-          a.placeholders.each_pair do |k, pair|
-            param, place = pair
-            placeholders[k] = [param, place + (param == :path ? a.total_previous_captures : 0)]
-          end
-        end
-        placeholders
-      end
-
-      # ==== Returns
-      # String:: A human readable form of the behavior.
-      def inspect
-        "[captures: #{path_captures.inspect}, conditions: #{@original_conditions.inspect}, params: #{@params.inspect}, placeholders: #{@placeholders.inspect}]"
-      end
-
-      # ==== Returns
-      # Boolean:: True if this behavior has a regexp.
-      def regexp?
-        @conditions_have_regexp
+        behavior = self
+        behavior = behavior.match("/#{path}") unless path.empty?
+        behavior.options(opts, &block)
       end
 
       def redirect(url, permanent = true)
-        @redirects       = true
-        @redirect_url    = url
-        @redirect_status = permanent ? 301 : 302
+        raise Error, "The route has already been committed." if @route
 
-        # satisfy route compilation
-        self.to({})
-      end
-
-      def redirects?
-        @redirects
-      end
-      
-      def ancestors
-        @ancestors ||= find_ancestors
+        status = permanent ? '301' : '302'
+        @route = Route.new(@conditions, {:url => url.freeze, :status => status.freeze}, :redirects => true).register
+        self
       end
 
     protected
 
-      # ==== Parameters
-      # name_or_path<~to_s>::
-      #   The name or path to convert to a form suitable for a prefix.
-      #
-      # ==== Returns
-      # String:: The prefix.
-      def namespace_to_name_prefix(name_or_path)
-        name_or_path.to_s.tr('/', '_') + '_'
-      end
-
-      # ==== Parameters
-      # matched_keys<String>::
-      #   The keys to match
-      #
-      # ==== Returns
-      # Array:: Behaviors for a RESTful resource.
-      def resources_behaviors(matched_keys = ":id")
-        [
-          Behavior.new({ :path => %r[^/?(\.:format)?$],     :method => :get },    { :action => "index" },   self),
-          Behavior.new({ :path => %r[^/index(\.:format)?$], :method => :get },    { :action => "index" },   self),
-          Behavior.new({ :path => %r[^/new$],               :method => :get },    { :action => "new" },     self),
-          Behavior.new({ :path => %r[^/?(\.:format)?$],     :method => :post },   { :action => "create" },  self),
-          Behavior.new({ :path => %r[^/#{matched_keys}(\.:format)?$],   :method => :get },    { :action => "show" },    self),
-          Behavior.new({ :path => %r[^/#{matched_keys}/edit$],       :method => :get },    { :action => "edit" },    self),
-          Behavior.new({ :path => %r[^/#{matched_keys}/delete$],     :method => :get },    { :action => "delete" },  self),
-          Behavior.new({ :path => %r[^/#{matched_keys}(\.:format)?$],   :method => :put },    { :action => "update" },  self),
-          Behavior.new({ :path => %r[^/#{matched_keys}(\.:format)?$],   :method => :delete }, { :action => "destroy" }, self)
-        ]
-      end
-
-      # ==== Parameters
-      # parent<Merb::Router::Behavior>::
-      #   The parent behavior for the generated resource behaviors.
-      #
-      # ==== Returns
-      # Array:: Behaviors for a singular RESTful resource.
-      def resource_behaviors(parent = self)
-        [
-          Behavior.new({ :path => %r{^/new$},        :method => :get },    { :action => "new" },     parent),
-          Behavior.new({ :path => %r{^/?(\.:format)?$}, :method => :post },   { :action => "create" },  parent),
-          Behavior.new({ :path => %r{^/?(\.:format)?$}, :method => :get },    { :action => "show" },    parent),
-          Behavior.new({ :path => %r{^/edit$},       :method => :get },    { :action => "edit" },    parent),
-          Behavior.new({ :path => %r{^/delete$},     :method => :get },    { :action => "delete" },    parent),
-          Behavior.new({ :path => %r{^/?(\.:format)?$}, :method => :put },    { :action => "update" },  parent),
-          Behavior.new({ :path => %r{^/?(\.:format)?$}, :method => :delete }, { :action => "destroy" }, parent)
-        ]
-      end
-
-      # ==== Parameters
-      # behaviors<Array>:: The behaviors to create routes from.
-      # params<Hash>:: Optional params for the route generation.
-      # &conditional_block:: Optional block for the route generation.
-      #
-      # ==== Returns
-      # Array:: The routes matching the behaviors.
-      def many_behaviors_to(behaviors, params = {}, &conditional_block)
-        behaviors.map { |b| b.to params, &conditional_block }
-      end
-
-      # Convert conditions to regular expression string sources for consistency.
-      def stringify_conditions
-        @conditions_have_regexp = false
-        @conditions.each_pair do |k,v|
-          # TODO: Other Regexp special chars
-
-          @conditions[k] = case v
-          when String,Symbol
-            "^#{v.to_s.escape_regexp}$"
-          when Regexp
-            @conditions_have_regexp = true
-            v.source
+      def stringify_condition_values
+        @conditions.each do |key, value|
+          unless value.nil? || Regexp === value || Array === value
+            @conditions[key] = value.to_s
           end
         end
       end
 
-      # Store the conditions as original conditions.
-      def copy_original_conditions
-        @original_conditions = {}
-        @conditions.each_pair do |key, value|
-          @original_conditions[key] = value.dup
-        end
-        @original_conditions
+    private
+
+      def merge_paths(path)
+        [@conditions[:path], path.freeze].flatten.compact
       end
 
-      # Calculate the behaviors from the conditions and store them.
-      def deduce_placeholders
-        @conditions.each_pair do |match_key, source|
-          while match = SEGMENT_REGEXP.match(source)
-            source.sub! SEGMENT_REGEXP, PARENTHETICAL_SEGMENT_STRING
-            unless match[2] == ':' # No need to store anonymous place holders
-              placeholder_key = match[2].intern
-              @params[placeholder_key] = "#{match[1]}"
-              @placeholders[placeholder_key] = [
-                match_key, Behavior.count_parens_up_to(source, match.offset(1)[0])
-              ]
-            end
-          end
-        end
-      end
-
-      # ==== Parameters
-      # list<Array>:: A list to which the ancestors should be added.
-      #
-      # ==== Returns
-      # Array:: All the ancestor behaviors of this behavior.
-      def find_ancestors(list = [])
-        if parent.nil?
-          list
-        else
-          list.push parent
-          parent.find_ancestors list
-          list
-        end
-      end
-
-      # ==== Returns
-      # Fixnum:: Number of regexp captures in the :path condition.
-      def path_captures
-        return 0 unless conditions[:path]
-        Behavior.count_parens_up_to(conditions[:path], conditions[:path].size)
-      end
-
-      # ==== Returns
-      # Fixnum:: Total number of previous path captures.
-      def total_previous_captures
-        ancestors.map{|a| a.path_captures}.inject(0){|sum, n| sum + n}
-      end
-
-      # def merge_with_ancestors
-      #   self.class.new(merged_conditions, merged_params)
-      # end
-
-      # ==== Parameters
-      # conditions<Hash>::
-      #   The conditions to compile. Defaults to merged_conditions.
-      #
-      # ==== Returns
-      # Hash:: The compiled conditions, with each value as a Regexp object.
-      def compiled_conditions(conditions = merged_conditions)
-        conditions.inject({}) do |compiled,(k,v)|
-          compiled.merge k => Regexp.new(v)
-        end
-      end
-
-      # ==== Parameters
-      # params<Hash>:: The params to compile. Defaults to merged_params.
-      # placeholders<Hash>::
-      #   The route placeholders for this behavior. Defaults to
-      #   merged_placeholders.
-      #
-      # ==== Returns
-      # String:: The params hash in an eval'able form.
-      #
-      # ==== Examples
-      #   compiled_params({ :controller => "admin/:controller" })
-      #     # => { :controller => "'admin/' + matches[:path][1]" }
-      #
-      def compiled_params(params = merged_params, placeholders = merged_placeholders)
-        compiled = {}
-        params.each_pair do |key, value|
-          unless value.is_a? String
-            raise ArgumentError, "param value for #{key.to_s} must be string (#{value.inspect})"
-          end
-          result = []
-          value = value.dup
-          match = true
-          while match
-            if match = SEGMENT_REGEXP_WITH_BRACKETS.match(value)
-              result << match.pre_match unless match.pre_match.empty?
-              ph_key = match[1][1..-1].intern
-              if match[2] # has brackets, e.g. :path[2]
-                result << :"#{ph_key}#{match[3]}"
-              else # no brackets, e.g. a named placeholder such as :controller
-                if place = placeholders[ph_key]
-                  result << :"#{place[0]}#{place[1]}"
-                else
-                  raise "Placeholder not found while compiling routes: :#{ph_key}"
-                end
-              end
-              value = match.post_match
-            elsif match = JUST_BRACKETS.match(value)
-              # This is a reference to :path
-              result << match.pre_match unless match.pre_match.empty?
-              result << :"path#{match[1]}"
-              value = match.post_match
-            else
-              result << value unless value.empty?
-            end
-          end
-          compiled[key] = Behavior.array_to_code(result).gsub("\\_", "_")
-        end
-        compiled
-      end
-    end # Behavior
+    end
   end
 end

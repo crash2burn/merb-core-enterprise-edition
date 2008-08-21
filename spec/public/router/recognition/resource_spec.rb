@@ -1,6 +1,7 @@
-require File.join(File.dirname(__FILE__), "spec_helper")
+require File.join(File.dirname(__FILE__), "..", "spec_helper")
 
-describe "resources routes" do
+describe "Recognizing requests for resources routes" do
+  
   before :each do
     Merb::Router.prepare do |r|
       r.resource :foo
@@ -34,4 +35,5 @@ describe "resources routes" do
   it "should match a get to /foo/delete to the blogposts controller and delete action" do
     route_to('/foo/delete', :method => :get).should have_route(:controller => 'foo', :action => 'delete', :id => nil)
   end
+  
 end
