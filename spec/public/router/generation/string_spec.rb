@@ -69,6 +69,10 @@ describe "When generating URLs," do
     it "should append any extra parameters to the query string" do
       url(:foobar, :foo => "omg", :bar => "hi2u", :fiz => "what", :biz => "bat").should == "/omg/hi2u?fiz=what&biz=bat"
     end
+    
+    it "should not append nil parameters to the query string" do
+      url(:foobar, :foo => "omg", :bar => "hi2u", :fiz => nil).should == "/omg/hi2u"
+    end
 
     it "should raise an error if the first variable is missing" do
       lambda { url(:foobar, :bar => "hi2u") }.should raise_error(Merb::Router::GenerationError)

@@ -73,6 +73,7 @@ module Merb
         # Generate the path part of the URL from the segments
         if url = segment_group_to_string(segments, params, query_params, true)
           # Query params
+          query_params.delete_if { |key, value| value.nil? }
           unless query_params.empty?
             url << "?" + Merb::Request.params_to_query_string(query_params)
           end
