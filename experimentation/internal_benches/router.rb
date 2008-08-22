@@ -51,10 +51,10 @@ end
 
 __END__
 
-                                   Results |
---------------------------------------------
-resources                            1.866 |
-nested resources                     2.454 |
-namespaced nested resource           2.439 |
-route with conditions                1.958 |
-default routes                       4.006 |
+                                    NORMAL | COMPILED |
+-------------------------------------------------------
+resources                            1.908 |    0.771 |
+nested resources                     2.481 |    1.058 |
+namespaced nested resource           2.484 |    1.071 |
+route with conditions                1.979 |    0.991 |
+default routes                       4.059 |    1.244 |
