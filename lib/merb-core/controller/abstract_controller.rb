@@ -435,9 +435,9 @@ class Merb::AbstractController
   # TODO: Update this documentation
   def url(name, rparams = {}, qparams = {})
     name, rparams, qparams = :default, name, rparams if Hash === name
-    # unless rparams.is_a?(Hash) || qparams.empty?
-    #   rparams = qparams.merge(:id => rparams)
-    # end
+    unless rparams.is_a?(Hash) || qparams.empty?
+      rparams = qparams.merge(:id => rparams)
+    end
     uri = Merb::Router.generate(name, rparams) 
     uri = Merb::Config[:path_prefix] + uri if Merb::Config[:path_prefix]
     uri
