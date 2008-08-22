@@ -6,6 +6,8 @@ class TestController < Merb::Controller
 end
 
 describe Merb::Test::RouteHelper do
+  include Merb::Test::RouteHelper
+  
   before(:each) do
     Merb::Router.prepare do |r|
       r.match("/", :method => :get).to(:controller => "test_controller", :action => "get").name(:getter)
