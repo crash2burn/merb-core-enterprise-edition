@@ -338,7 +338,7 @@ module Merb
           elsif String === value
             @params[key] = compile_param(value)
           else
-            raise ArgumentError, "param value for #{key.to_s}  must be a string (#{value.inspect})"
+            @params[key] = value.inspect
           end
         end
       end

@@ -11,6 +11,20 @@ describe "When recognizing requests," do
 
       route_to("/hello").should have_route(:foo => "bar")
     end
+    
+    it "should be able to handle Numeric params" do
+      Merb::Router.prepare do |r|
+        r.match("/hello").to(:integer => 10, :float => 5.5)
+      end
+      
+      route_to("/hello").should have_route(:integer => 10, :float => 5.5)
+    end
+    
+    it "should be able to handle Boolean params" do
+      Merb::Router.prepare do |r|
+        r.match("/hello").to(:true => true, :false => false)
+      end
+    end
 
     it "should only contain an :action key if no params are defined" do
       # This because all routes have :action => "index" as a default

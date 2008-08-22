@@ -21,7 +21,7 @@ describe "When recognizing requests," do
     end
     
     it "should be a permanent redirect" do
-      matched_route_for("/foo").redirect_status.should == "301"
+      matched_route_for("/foo").redirect_status.should == 301
     end
     
     it "should be able to set the redirect as a temporary redirect" do
@@ -29,7 +29,7 @@ describe "When recognizing requests," do
         r.match("/foo").redirect("/bar", false)
       end
       
-      matched_route_for("/foo").redirect_status.should == "302"
+      matched_route_for("/foo").redirect_status.should == 302
     end
     
   end
