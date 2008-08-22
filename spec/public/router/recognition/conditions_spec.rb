@@ -119,7 +119,38 @@ describe "When recognizing requests," do
       end
     end
     
-    it "should have more specs describing complex conditions on variables"
+    it "should allow greedy matches to preceed segments" do
+      Merb::Router.prepare do |r|
+        r.match!("/foo/:bar/something/:else", :bar => /.*/)
+      end
+      
+      %w(somewhere somewhere/somehow 123/456/789 i;just/dont-understand).each do |path|
+        route_to("/foo/#{path}/something/wonderful").should have_route(:bar => path, :else => "wonderful")
+      end
+    end
+    
+    it "should allow creating conditions that proceed a glob" do
+      Merb::Router.prepare do |r|
+        r.match!("/:foo/bar/:glob", :glob => /.*/)
+      end
+      
+      %w(somewhere somewhere/somehow 123/456/789 i;just/dont-understand).each do |path|
+        route_to("/superblog/bar/#{path}").should have_route(:foo => "superblog", :glob => path)
+        route_to("/notablog/foo/#{path}").should have_nil_route
+      end
+    end
+    
+    it "should match only if all mixed conditions are satisied" do
+      Merb::Router.prepare do |r|
+        r.match!("/:blog/post/:id", :blog => %r{^[a-zA-Z]+$}, :id => %r{^[0-9]+$})
+      end
+      
+      route_to("/superblog/post/123").should      have_route(:blog => "superblog",  :id => "123")
+      route_to("/superblawg/post/321").should     have_route(:blog => "superblawg", :id => "321")
+      route_to("/superblog/post/asdf").should     have_nil_route
+      route_to("/superblog1/post/123").should     have_nil_route
+      route_to("/ab/12").should                   have_nil_route
+    end
   end
   
   describe "a route built with nested conditions" do
