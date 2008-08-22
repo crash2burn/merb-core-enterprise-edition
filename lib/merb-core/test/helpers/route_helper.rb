@@ -12,6 +12,7 @@ module Merb
       # ==== Returns
       # String:: The generated URL.
       def url(name, params={})
+        name, params = :default, name if Hash === name
         Merb::Router.generate(name, params)
       end
       

@@ -48,10 +48,10 @@ module Spec
     end
 
     # Returns a generated URL from parameters
-    def url(name = {}, params = {})
-      name, params = :default, name if Hash === name
-      Merb::Router.generate(name, params)
-    end
+    # def url(name = {}, params = {})
+    #   name, params = :default, name if Hash === name
+    #   Merb::Router.generate(name, params)
+    # end
 
     # Fake request object
     class Request < OpenStruct

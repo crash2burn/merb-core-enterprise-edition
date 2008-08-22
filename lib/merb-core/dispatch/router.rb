@@ -78,7 +78,10 @@ module Merb
         unless route = @@named_routes[name.to_sym]
           raise GenerationError, "Named route not found: #{name}"
         end
-        params = Hash === args.last ? args.last : { :id => args.last }
+        
+        # As of now, only a has is accepted
+        params = extract_options_from_args!(args) || { :id => args.first }
+        
         route.generate(params) or raise GenerationError, "Named route #{name} could not be generated with #{params.inspect}"
       end
 

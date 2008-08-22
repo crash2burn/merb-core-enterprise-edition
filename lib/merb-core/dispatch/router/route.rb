@@ -63,13 +63,32 @@ module Merb
       end
       
       def variables
-        @variables ||= @segments.flatten.select { |s| Hash === s }
+        @variables ||= @segments.flatten.select { |s| Symbol === s }
       end
 
       # This is a temporary implementation to get the specs to pass
       def generate(params = {})
         raise GenerationError, "Cannot generate regexp Routes" if regexp?
         query_params = params.dup
+        
+        # --- A little dancing to get the old merb specs to pass ---
+        
+        # Any required parameter that looks like an association ID and
+        # is missing should be fetched from the resource.
+        variables.each do |v|
+          if v.to_s =~ /_id$/ && params[:id].respond_to?(v)
+            params[v] ||= params[:id].send(v)
+          end
+        end
+        
+        # If any param responds to to_param, then that return value should
+        # be used instead.
+        params.each do |key, value|
+          params[key] = value.to_param if value.respond_to?(:to_param)
+        end
+        
+        # --- Our little dance is finished ---
+        
         # Generate the path part of the URL from the segments
         if url = segment_group_to_string(segments, params, query_params, true)
           # Query params
@@ -133,9 +152,7 @@ module Merb
               segment.all? { |s| String === s }
           elsif Symbol === segment
             query_params.delete(segment)
-            value = params[segment]
-            # --- Pretty much a carry over from the old router ---
-            value.respond_to?(:to_param) ? value.to_param : value.to_s
+            params[segment]
           else
             segment
           end
