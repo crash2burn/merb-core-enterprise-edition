@@ -84,6 +84,17 @@ module Merb
         
         route.generate(params) or raise GenerationError, "Named route #{name} could not be generated with #{params.inspect}"
       end
+      
+      def generate2(name, *args)
+        unless route = @@named_routes[name.to_sym]
+          raise GenerationError, "Named route not found: #{name}"
+        end
+        
+        # As of now, only a has is accepted
+        params = extract_options_from_args!(args) || { :id => args.first }
+        
+        route.generate2(params) or raise GenerationError, "Named route #{name} could not be generated with #{params.inspect}"
+      end
 
       # Defines method with a switch statement that does routes recognition.
       def compile

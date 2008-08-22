@@ -96,6 +96,31 @@ module Merb
           return url
         end
       end
+      
+      # === Compiled method ===
+      def generate2(params = {})
+        raise GenerationError, "Cannot generate regexp Routes" if regexp?
+        
+        # --- A little dancing to get the old merb specs to pass ---
+        
+        # Any required parameter that looks like an association ID and
+        # is missing should be fetched from the resource.
+        variables.each do |v|
+          if v.to_s =~ /_id$/ && params[:id].respond_to?(v)
+            params[v] ||= params[:id].send(v)
+          end
+        end
+        
+        # If any param responds to to_param, then that return value should
+        # be used instead.
+        params.each do |key, value|
+          params[key] = value.to_param if value.respond_to?(:to_param)
+        end
+        
+        # --- Our little dance is finished ---
+        
+        @generator[params]
+      end
 
       def compiled_statement(first = false)
         els_if = first ? '  if ' : '  elsif '
@@ -154,13 +179,73 @@ module Merb
           end
         end.join
       end
+      
+    # === Building a proc that can generate the route from params ===
+    
+      def compile_generation
+        ruby  = ""
+        ruby << "lambda do |params|\n"
+        ruby << "#{generation_block_for_level(segments, 0)}\n"
+        ruby << "end\n"
+        @generator = eval(ruby)
+      end
+      
+      def generation_block_for_level(segments, level)
+        ruby  = ""
+        ruby << "if #{generation_conditions_for_segment_level(segments)}\n"
+        ruby << "#{generation_optionals_for_segment_level(segments, level + 1)}\n"
+        ruby << %{"#{combine_generation_bits_for_segment_level(segments, level + 1)}"\n}
+        ruby << "end"
+      end
+      
+      def generation_conditions_for_segment_level(segments)
+        conditions = segments.select { |s| Symbol === s }.map do |segment|
+          condition = "(cached_#{segment} = params[#{segment.inspect}])"
+          
+          if @symbol_conditions[segment] && @symbol_conditions[segment].is_a?(Regexp)
+            condition << " =~ #{@symbol_conditions[segment].inspect}"
+          elsif @symbol_conditions[segment]
+            condition << " == #{@symbol_conditions[segment].inspect}"
+          end
+          
+          condition
+        end
+        conditions << "true" if conditions.empty?
+        conditions.join(" && ")
+      end
+      
+      def generation_optionals_for_segment_level(segments, level)
+        optionals = []
+        
+        segments.each_with_index do |segment, i|
+          if Array === segment
+            optionals << %{_optional_segments_#{level}_#{i} = #{generation_block_for_level(segment, level)}}
+          end
+        end
+        
+        optionals.join("\n")
+      end
+      
+      def combine_generation_bits_for_segment_level(segments, level)
+        bits = ""
+        
+        segments.each_with_index do |segment, i|
+          bits << case segment
+            when String then segment
+            when Symbol then '#{cached_' + segment.to_s + '}'
+            when Array then '#{' + "_optional_segments_#{level}_#{i}" +'}'
+          end
+        end
+        
+        bits
+      end
 
     # === Compilation ===
 
       def compile
         compile_conditions
         compile_params
-        @variables = @segments.flatten.select { |s| Symbol === s }
+        compile_generation
       end
 
       def compile_conditions
@@ -205,6 +290,8 @@ module Merb
             raise ArgumentError.new("A route path can only be specified as a String or Regexp")
           end
         end
+        
+        @variables = @segments.flatten.select { |s| Symbol === s }
 
         compiled
       end
