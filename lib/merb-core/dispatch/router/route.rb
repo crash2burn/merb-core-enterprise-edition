@@ -11,7 +11,7 @@ module Merb
       SEGMENT_CHARACTERS           = "[^\/.,;?]".freeze
 
       attr_reader :conditions
-      attr_reader :params, :segments, :index, :symbol
+      attr_reader :params, :segments, :index, :symbol, :variables
       attr_reader :redirect_status, :redirect_url
 
       def initialize(conditions, params, options = {}, &conditional_block)
@@ -60,10 +60,6 @@ module Merb
       def name(symbol)
         raise ArgumentError.new("Route names must be symbols") unless Symbol === (@symbol = symbol)
         Merb::Router.named_routes[@symbol] = self
-      end
-      
-      def variables
-        @variables ||= @segments.flatten.select { |s| Symbol === s }
       end
 
       # This is a temporary implementation to get the specs to pass
@@ -192,6 +188,7 @@ module Merb
       def compile
         compile_conditions
         compile_params
+        @variables = @segments.flatten.select { |s| Symbol === s }
       end
 
       def compile_conditions
@@ -205,12 +202,6 @@ module Merb
             conditions.delete(:path)
           end
         end
-
-        # conditions.each do |key, value|
-        #   unless Regexp === value
-        #     conditions[key] = Regexp.new("^#{Regexp.escape(value)}$")
-        #   end
-        # end
       end
 
       # The path is passed in as an array of different parts. We basically have

@@ -60,7 +60,7 @@ describe "When recognizing requests," do
     end
   end
   
-  describe "a route containing variable conditions" do
+  describe "a route containing path variable conditions" do
     
     it "should match only if the condition is satisfied" do
       Merb::Router.prepare { |r| r.match!("/foo/:bar", :bar => /\d+/) }
@@ -151,6 +151,14 @@ describe "When recognizing requests," do
       route_to("/superblog1/post/123").should     have_nil_route
       route_to("/ab/12").should                   have_nil_route
     end
+  end
+  
+  describe "a route containing host variable conditions" do
+    
+    it "should be awesome" do
+      pending "Nothing is implemented here yet"
+    end
+    
   end
   
   describe "a route built with nested conditions" do

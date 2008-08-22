@@ -104,6 +104,7 @@ module Merb
           condition_keys, if_statements = Set.new, ""
 
           routes.each_with_index do |route, i|
+            route.freeze
             route.conditions.keys.each { |key| condition_keys << key }
             if_statements << route.compiled_statement(i == 0)
           end
