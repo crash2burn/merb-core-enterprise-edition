@@ -154,34 +154,6 @@ module Merb
           end
         end.join
       end
-      
-      # The old bit that converted objects for the segment
-      # ---
-      # value =
-      #   if segment.is_a? Symbol
-      #     if params.is_a? Hash
-      #       if segment.to_s =~ /_id/ && params[:id].respond_to?(segment)
-      #         params[segment] = params[:id].send(segment)
-      #       end
-      #       query_params.delete segment
-      #       params[segment] || fallback[segment]
-      #     else
-      #       if segment == :id && params.respond_to?(:to_param)
-      #         params.to_param
-      #       elsif segment == :id && params.is_a?(Fixnum)
-      #         params
-      #       elsif params.respond_to?(segment)
-      #         params.send(segment)
-      #       else
-      #         fallback[segment]
-      #       end
-      #     end
-      #   elsif segment.respond_to? :to_s
-      #     segment
-      #   else
-      #     raise "Segment type '#{segment.class}' can't be converted to a string"
-      #   end
-      # (value.respond_to?(:to_param) ? value.to_param : value).to_s.unescape_regexp
 
     # === Compilation ===
 
@@ -369,16 +341,6 @@ module Merb
         result.join(' + ').gsub("\\_", "_")
       end
 
-    # ---------- Required Symbol segments ---------- 
-
-      # Returns an array containing all the symbols that are required for
-      # this route
-      def required_symbols_from_segments
-        segments.select { |segment| Symbol === segment }.uniq
-      end
-
-    # ---------- Route compilation ---------- 
-
       def condition_statements
         statements = []
 
@@ -417,7 +379,6 @@ module Merb
 
       def capturing_parentheses_count(regexp)
         regexp = regexp.source if Regexp === regexp
-        # regexp.scan(%r[\((?!\?)]).length
         regexp.scan(/(?!\\)[(](?!\?[#=:!>-imx])/).length
       end
 
