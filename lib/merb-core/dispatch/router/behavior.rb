@@ -325,7 +325,7 @@ module Merb
       def redirect(url, permanent = true)
         raise Error, "The route has already been committed." if @route
 
-        status = permanent ? '301' : '302'
+        status = permanent ? 301 : 302
         @route = Route.new(@conditions, {:url => url.freeze, :status => status.freeze}, :redirects => true).register
         self
       end
