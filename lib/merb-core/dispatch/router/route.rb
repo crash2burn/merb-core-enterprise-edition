@@ -50,6 +50,12 @@ module Merb
       def redirects?
         @redirects
       end
+      
+      def to_s
+        regexp? ?
+          "/#{conditions[:path].source}/" :
+          segment_level_to_s(segments)
+      end
 
       def register
         @index = Merb::Router.routes.size
@@ -245,7 +251,7 @@ module Merb
       def compile
         compile_conditions
         compile_params
-        compile_generation
+        # compile_generation
       end
 
       def compile_conditions
@@ -463,6 +469,16 @@ module Merb
       end
 
     # ---------- Utilities ---------- 
+    
+      def segment_level_to_s(segments)
+        (segments || []).inject('') do |str, seg|
+          str << case seg
+            when String then seg
+            when Symbol then ":#{seg}"
+            when Array  then "(#{segment_level_to_s(seg)})"
+          end
+        end
+      end
 
       def capturing_parentheses_count(regexp)
         regexp = regexp.source if Regexp === regexp
