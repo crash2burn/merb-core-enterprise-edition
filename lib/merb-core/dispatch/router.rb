@@ -4,7 +4,22 @@ require 'merb-core/dispatch/router/resources'
 require 'merb-core/dispatch/router/route'
 
 module Merb
-  
+  # Router stores route definitions and finds the first
+  # route that matches the incoming request URL.
+  #
+  # Then information from route is used by dispatcher to
+  # call action on the controller.
+  #
+  # ==== Routes compilation.
+  #
+  # The most interesting method of Router (and heart of
+  # route matching machinery) is match method generated
+  # on the fly from routes definitions. It is called routes
+  # compilation. Generated match method body contains
+  # one if/elsif statement that picks the first matching route
+  # definition and sets values to named parameters of the route.
+  #
+  # Compilation is synchronized by mutex.
   class Router
     @@routes = []
     @@named_routes = {}
