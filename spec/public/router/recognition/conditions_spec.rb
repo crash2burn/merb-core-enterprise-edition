@@ -182,6 +182,18 @@ describe "When recognizing requests," do
       route_to("/one").should     have_nil_route
     end
     
+    it "should be able to define a route and still use the context for more route definition" do
+      Merb::Router.prepare do |r|
+        r.match("/hello") do |h|
+          h.to(:controller => "foo", :action => "bar")
+          h.match("/world").to(:controller => "hello", :action => "world")
+        end
+      end
+      
+      route_to("/hello").should have_route(:controller => "foo", :action => "bar")
+      route_to("/hello/world").should have_route(:controller => "hello", :action => "world")
+    end
+    
     it "should be able to add blank paths without effecting the actual path" do
       Merb::Router.prepare do |r|
         r.match("/foo") do |p|

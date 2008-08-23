@@ -200,12 +200,13 @@ module Merb
       def to(params = {}, &block)
         raise Error, "The route has already been committed. Further params cannot be specified" if @route
 
+        behavior = self.class.new(@conditions, @params.merge(params), @defaults, @options)
+        
         if block_given?
-          behavior = self.class.new(@conditions, @params.merge(params), @defaults, @options)
           yield behavior if block_given?
           behavior
         else
-          to_route(params).register
+          behavior.to_route(params).register
         end
       end
 
