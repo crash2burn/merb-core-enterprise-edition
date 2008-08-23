@@ -185,16 +185,16 @@ module Merb
       def compile_generation
         ruby  = ""
         ruby << "lambda do |params|\n"
-        ruby << "#{generation_block_for_level(segments, 0)}\n"
+        ruby << "#{generation_block_for_level(segments)}\n"
         ruby << "end\n"
         @generator = eval(ruby)
       end
       
-      def generation_block_for_level(segments, level)
+      def generation_block_for_level(segments)
         ruby  = ""
         ruby << "if #{generation_conditions_for_segment_level(segments)}\n"
-        ruby << "#{generation_optionals_for_segment_level(segments, level + 1)}\n"
-        ruby << %{"#{combine_generation_bits_for_segment_level(segments, level + 1)}"\n}
+        ruby << "#{generation_optionals_for_segment_level(segments)}\n"
+        ruby << %{"#{combine_generation_bits_for_segment_level(segments)}"\n}
         ruby << "end"
       end
       
@@ -214,26 +214,26 @@ module Merb
         conditions.join(" && ")
       end
       
-      def generation_optionals_for_segment_level(segments, level)
+      def generation_optionals_for_segment_level(segments)
         optionals = []
         
         segments.each_with_index do |segment, i|
           if Array === segment
-            optionals << %{_optional_segments_#{level}_#{i} = #{generation_block_for_level(segment, level)}}
+            optionals << %{_optional_segments_#{segment.object_id} = #{generation_block_for_level(segment)}}
           end
         end
         
         optionals.join("\n")
       end
       
-      def combine_generation_bits_for_segment_level(segments, level)
+      def combine_generation_bits_for_segment_level(segments)
         bits = ""
         
         segments.each_with_index do |segment, i|
           bits << case segment
             when String then segment
             when Symbol then '#{cached_' + segment.to_s + '}'
-            when Array then '#{' + "_optional_segments_#{level}_#{i}" +'}'
+            when Array then '#{' + "_optional_segments_#{segment.object_id}" +'}'
           end
         end
         
