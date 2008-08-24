@@ -166,4 +166,15 @@ describe "When generating URLs," do
     
   end
   
+  describe "a resource route nested in a conditional block" do
+    it "should use previously set conditions" do
+      Merb::Router.prepare do |r|
+        r.match("/prefix") do |p|
+          p.resources :users
+        end
+      end
+      
+      url(:users).should == "/prefix/users"
+    end
+  end
 end

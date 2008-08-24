@@ -96,26 +96,41 @@ describe "When generating URLs," do
     it "should have more specs regarding regexp conditions and anchors"
   end
   
-end
+  describe "a route with multiple conditions" do
+    
+    before(:each) do
+      Merb::Router.prepare do |r|
+        r.match!("/:one/:two", :one => "hello", :two => %r[^(world|moon)$]).name(:condition)
+      end
+    end
 
-describe "Generating URLs from a route with multiple conditions" do
+    it "should generate if all the conditions are met" do
+      url(:condition, :one => "hello", :two => "moon").should == "/hello/moon"
+    end
+
+    it "should not generate if any of the conditions fail" do
+      lambda { url(:condition, :one => "hello") }.should raise_error(Merb::Router::GenerationError)
+      lambda { url(:condition, :two => "world") }.should raise_error(Merb::Router::GenerationError)
+    end
+
+    it "should append any extra elements to the query string" do
+      url(:condition, :one => "hello", :two => "world", :three => "moon").should == "/hello/world?three=moon"
+    end
+    
+  end
   
-  before(:each) do
-    Merb::Router.prepare do |r|
-      r.match!("/:one/:two", :one => "hello", :two => %r[^(world|moon)$]).name(:condition)
+  describe "a route with nested condition blocks" do
+    it "should use both condition blocks to generate" do
+      Merb::Router.prepare do |r|
+        r.match("/prefix") do |p|
+          p.to(:controller => "prefix", :action => "show").name(:prefix)
+          p.match("/second").to(:controller => "second").name(:second)
+        end
+      end
+      
+      url(:prefix).should == "/prefix"
+      url(:second).should == "/prefix/second"
     end
   end
   
-  it "should generate if all the conditions are met" do
-    url(:condition, :one => "hello", :two => "moon").should == "/hello/moon"
-  end
-  
-  it "should not generate if any of the conditions fail" do
-    lambda { url(:condition, :one => "hello") }.should raise_error(Merb::Router::GenerationError)
-    lambda { url(:condition, :two => "world") }.should raise_error(Merb::Router::GenerationError)
-  end
-  
-  it "should append any extra elements to the query string" do
-    url(:condition, :one => "hello", :two => "world", :three => "moon").should == "/hello/world?three=moon"
-  end
 end

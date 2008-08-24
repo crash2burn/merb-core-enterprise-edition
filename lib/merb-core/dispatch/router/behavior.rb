@@ -143,7 +143,7 @@ module Merb
           params[:controller] = (@options[:controller_prefix] + [controller]).compact.join('/')
         end
 
-        @route = Route.new(@conditions, params, :defaults => @defaults, &conditional_block)
+        @route = Route.new(@conditions.dup, params, :defaults => @defaults.dup, &conditional_block)
         self
       end
 
