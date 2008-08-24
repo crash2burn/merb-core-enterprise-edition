@@ -56,6 +56,8 @@ module Merb
           "/#{conditions[:path].source}/" :
           segment_level_to_s(segments)
       end
+      
+      alias_method :inspect, :to_s
 
       def register
         @index = Merb::Router.routes.size
