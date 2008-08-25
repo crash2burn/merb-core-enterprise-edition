@@ -4,8 +4,37 @@ describe "When recognizing requests," do
 
   describe "a route with a Regexp path condition" do
     
-    it "should allow mixing regular expression paths with string paths when nesting match blocks"
+    it "should allow a regex expression" do
+      Merb::Router.prepare do |r|
+        r.match(%r{^/foos?/(bar|baz)/([a-z0-9]+)}).to(:controller => "foo", :action => "[1]", :id => "[2]")
+      end
+      
+      route_to("/foo/bar/baz").should have_route(:controller => "foo", :action => "bar", :id => "baz")
+      route_to("/foos/bar/baz").should have_route(:controller => "foo", :action => "bar", :id => "baz")
+      route_to("/bars/foo/baz").should have_nil_route
+    end
     
+    it "should allow mixing regular expression paths with string paths" do
+      Merb::Router.prepare do |r|
+        r.match(%r{^/(foo|bar)/baz/([a-z0-9]+)}).to(:controller => "[1]", :action => "baz", :id => "[2]")
+      end
+      
+      route_to("/foo/baz/bar").should have_route(:controller => "foo", :action => "baz", :id => "bar")
+      route_to("/bar/baz/foo").should have_route(:controller => "bar", :action => "baz", :id => "foo")
+      route_to("/for/bar/baz").should have_nil_route
+    end
+    
+    it "should allow mixing regular expression paths with string paths when nesting match blocks" do
+      Merb::Router.prepare do |r|
+        r.match("/buh/") do |buh|
+          buh.match(%r{^(foo|bar)/baz/([a-z0-9]+)}).to(:controller => "[1]", :action => "baz", :id => "[2]")
+        end
+      end
+      
+      route_to("/buh/foo/baz/1").should have_route(:controller => "foo", :action => "baz", :id => "1")
+      route_to("/buh/bar/baz/buh").should have_route(:controller => "bar", :action => "baz", :id => "buh")
+      route_to("/buh/baz/foo/buh").should have_nil_route
+    end
   end
 
 end
