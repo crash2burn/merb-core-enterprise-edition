@@ -59,7 +59,7 @@ spec = Gem::Specification.new do |s|
   #s.rdoc_options     += RDOC_OPTS + ["--exclude", "^(app|uploads)"]
 
   # Dependencies
-  s.add_dependency "extlib", ">=0.9.4"
+  s.add_dependency "extlib", "= 0.9.6"
   s.add_dependency "erubis"
   s.add_dependency "rake"
   s.add_dependency "json_pure"
@@ -322,8 +322,9 @@ namespace :repo do
 end
 
 def git_log(since_release = nil, log_format = "%an")
-  git_log_query = "git log --pretty='format:#{log_format}' --no-merges"
-  git_log_query << " --since='v#{since_release}'" if since_release
+  git_log_query = "git log"
+  git_log_query << " v#{since_release}..HEAD" if since_release
+  git_log_query << " --pretty='format:#{log_format}' --no-merges"
   puts
   puts "Running #{git_log_query}"
   puts
@@ -331,10 +332,10 @@ def git_log(since_release = nil, log_format = "%an")
 end
 
 def contributors(since_release = nil)
-  @merb_contributors ||= git_log(since_release).split("\n").uniq.sort
+  git_log(since_release).split("\n").uniq.sort
 end
 
-PREVIOUS_RELEASE = '0.9.4'
+PREVIOUS_RELEASE = '0.9.5'
 namespace :history do
   namespace :update do
     desc "updates contributors list"
