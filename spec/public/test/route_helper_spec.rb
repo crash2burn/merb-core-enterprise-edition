@@ -22,6 +22,7 @@ describe Merb::Test::RouteHelper do
     end
     
     it "should work with a model as the parameter" do
+      pending "This is not true anymore"
       model = mock(:model)
       model.stub!(:id).and_return("123")
       url(:with_id, model).should == "/123"
@@ -45,6 +46,7 @@ describe Merb::Test::RouteHelper do
     end
     
     it "should remove items with nil values from query params when named route isn't specified" do
+      pending "This needs a default route to generate"
       url(:controller => 'cont', :action => 'act', :color => nil, :size => 'large').should == "/cont/act?size=large"
     end
   end

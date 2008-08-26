@@ -487,6 +487,7 @@ module Merb
         regexp.scan(/(?!\\)[(](?!\?[#=:!>-imx])/).length
       end
 
+      # --- I don't think that this is used anymore and can be removed ---
       def array_to_code(arr)
         code = ''
         arr.each_with_index do |part, i|

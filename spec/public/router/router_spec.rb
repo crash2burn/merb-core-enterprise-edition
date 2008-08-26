@@ -1,6 +1,31 @@
 require File.join(File.dirname(__FILE__), "spec_helper")
 
 describe Merb::Router do
+  
+  describe "#prepare" do
+    
+    before(:each) do
+      @builder_methods = [
+        :add, :match, :match!, :fixatable, :register,
+        :name, :full_name, :to, :defaults, :options, :defer_to,
+        :default_routes, :namespace, :redirect, :resources, :resource
+      ]
+    end
+    
+    it "should be able to compile an empty route table" do
+      lambda do
+        Merb::Router.prepare { }
+      end.should_not raise_error(SyntaxError)
+    end
+    
+    it "should yield an instance of the builder object" do
+      Merb::Router.prepare do |r|
+        @builder_methods.each do |method|
+          r.should respond_to(method)
+        end
+      end
+    end
+  end
 
   describe "#match" do
     

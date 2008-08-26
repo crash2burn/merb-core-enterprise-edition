@@ -127,6 +127,22 @@ describe "When recognizing requests," do
       
       route_to("/goodbye/world", :domain => "hello.world.com").should have_route(:combined => "hello goodbye")
     end
+    
+    it "should strip the trailing slash from :controller" do
+      Merb::Router.prepare do |r|
+        r.match("/").to(:controller => "/home")
+      end
+      
+      route_to("/").should have_route(:controller => "home")
+    end
+    
+    it "should accept a Symbol for :controller" do
+      Merb::Router.prepare do |r|
+        r.match("/").to(:controller => :home)
+      end
+      
+      route_to("/").should have_route(:controller => "home")
+    end
   end
   
   describe "a route with nested to blocks" do

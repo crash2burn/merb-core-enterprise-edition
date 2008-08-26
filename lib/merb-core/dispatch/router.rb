@@ -113,7 +113,11 @@ module Merb
 
       # Defines method with a switch statement that does routes recognition.
       def compile
-        eval(compiled_statement, binding, "Generated Code for Merb::Router#match(#{__FILE__}:#{__LINE__})", 1)
+        if routes.any?
+          eval(compiled_statement, binding, "Generated Code for Merb::Router#match(#{__FILE__}:#{__LINE__})", 1)
+        else
+          reset!
+        end
       end
 
       def match_before_compilation(request)

@@ -136,13 +136,25 @@ module Merb
 
         raise Error, "The route has already been committed." if @route
 
-        # I'm not sure if this is the best way to implement namespaces. Maybe
-        # the namespace should be passed to Route and Route handles it however.
+        # Gah, this is pretty ugly
+        controller = params[:controller]
+        
         if @options[:controller_prefix]
+          prefixes   = @options[:controller_prefix].compact
           controller = params[:controller] || ":controller"
-          params[:controller] = (@options[:controller_prefix] + [controller]).compact.join('/')
+          index      = prefixes.length - 1
+          
+          while index >= 0 && (pref = prefixes[index]) && controller !~ %r(^/)
+            controller = "#{pref}/#{controller}"
+            index -= 1
+          end
         end
-
+        
+        if controller
+          controller = controller.to_s.gsub(%r[^/], '')
+          params.merge!(:controller => controller)
+        end
+        
         @route = Route.new(@conditions.dup, params, :defaults => @defaults.dup, &conditional_block)
         self
       end

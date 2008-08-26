@@ -49,6 +49,16 @@ describe "When recognizing requests," do
       route_to("/administration/foo").should have_route(:controller => "admin/foos")
     end
     
+    it "should be able to escape the controller namespace" do
+      Merb::Router.prepare do |r|
+        r.namespace :admin do |a|
+          a.match("/login").to(:controller => "/sessions")
+        end
+      end
+      
+      route_to("/admin/login").should have_route(:controller => "sessions")
+    end
+    
     it "should be able to set a namespace without a path prefix" do
       Merb::Router.prepare do |r|
         r.namespace :admin, :path => "" do |admin|
@@ -239,6 +249,18 @@ describe "When recognizing requests," do
       end
       
       route_to('/foo/baz/blah').should have_route(:controller => 'foo/baz/blah', :action => "default_action")
+    end
+    
+    it "should use the controller prefix from the last time the prefix started with /" do
+      Merb::Router.prepare do |r|
+        r.namespace(:foo) do |f|
+          f.namespace(:bar, :controller_prefix => "/bar") do |b|
+            b.match("/home").to(:controller => "home")
+          end
+        end
+      end
+      
+      route_to("/foo/bar/home").should have_route(:controller => "bar/home")
     end
   end
 
