@@ -25,6 +25,37 @@ describe Merb::Router do
         end
       end
     end
+    
+    it "should evaluate the prepare block in context of an object that can proxy method calls to the current builder object" do
+      pending
+      Merb::Router.prepare do
+        @builder_methods.each do |method|
+          self.should respond_to(method)
+        end
+      end
+    end
+    
+    it "should be able to keep track of the current builder context when calling to" do
+      pending
+      Merb::Router.prepare do
+        match("/hello") do
+          match("/world").to(:controller => "hellos")
+        end
+      end
+      
+      route_to("/hello/world").should have_route(:controller => "hello")
+    end
+    
+    it "should be able to keep track of the current builder context when calling to" do
+      pending
+      Merb::Router.prepare do
+        match("/hello") do
+          to(:controller => "hellos")
+        end
+      end
+      
+      route_to("/hello").should have_route(:controller => "hellos")
+    end
   end
 
   describe "#match" do

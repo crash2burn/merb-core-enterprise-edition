@@ -15,8 +15,72 @@ module Merb
     class Behavior
 
       class Error < StandardError; end;
+      
+      # Proxy catches any methods and proxies them to the current behavior.
+      # This allows building routes without constantly having to catching the
+      # yielded behavior object
+      # ---
+      # @private
+      class Proxy
+        # Undefine as many methods as possible so that everything can be proxied
+        # along to the behavior
+        instance_methods.each { |m| undef_method m unless %w[ __id__ __send__ class kind_of? respond_to? assert_kind_of should should_not instance_variable_set instance_variable_get ].include?(m) }
+        
+        def initialize
+          @behaviors = []
+        end
+        
+        def push(behavior)
+          @behaviors.push(behavior)
+        end
+        
+        def pop
+          @behaviors.pop
+        end
+        
+        def respond_to?(*args)
+          super || @behavors.last.respond_to?(*args)
+        end
+        
+      private
+      
+        def method_missing(method, *args, &block)
+          behavior = @behaviors.last
+          
+          if behavior.respond_to?(method)
+            behavior.send(method, *args, &block)
+          else
+            super
+          end
+        end
+      end
 
-      def initialize(conditions = {}, params = {}, defaults = {}, options = {})
+      # Behavior objects are used for the Route building DSL. Each object keeps
+      # track of the current definitions for the level at which it is defined.
+      # Each time a method is called on a Behavior object that accepts a block,
+      # a new instance of the Behavior class is created.
+      #
+      # ==== Parameters
+      #
+      # proxy<Proxy>::
+      #   This is the object initialized by Merb::Router.prepare that tracks the
+      #   current Behavior object stack so that Behavior methods can be called
+      #   without explicitly calling them on an instance of Behavior.
+      # conditions<Hash>::
+      #   The initial route conditions. See #match.
+      # params<Hash>::
+      #   The initial route parameters. See #to.
+      # defaults<Hash>::
+      #   The initial route default parameters. See #defaults.
+      # options<Hash>::
+      #   The initial route options. See #options.
+      #
+      # ==== Returns
+      # Behavior:: The initialized Behavior object
+      #---
+      # @private
+      def initialize(proxy, conditions = {}, params = {}, defaults = {}, options = {})
+        @proxy      = proxy
         @conditions = conditions
         @params     = params
         @defaults   = defaults
@@ -110,7 +174,7 @@ module Merb
 
         raise Error, "The route has already been committed. Further conditions cannot be specified" if @route
 
-        behavior = self.class.new(@conditions.merge(conditions), @params, @defaults, @options)
+        behavior = self.class.new(@proxy, @conditions.merge(conditions), @params, @defaults, @options)
         yield behavior if block_given?
         behavior
       end
@@ -212,7 +276,7 @@ module Merb
       def to(params = {}, &block)
         raise Error, "The route has already been committed. Further params cannot be specified" if @route
 
-        behavior = self.class.new(@conditions, @params.merge(params), @defaults, @options)
+        behavior = self.class.new(@proxy, @conditions, @params.merge(params), @defaults, @options)
         
         if block_given?
           yield behavior if block_given?
@@ -223,7 +287,7 @@ module Merb
       end
 
       def defaults(defaults = {}, &block)
-        behavior = self.class.new(@conditions, @params, @defaults.merge(defaults), @options)
+        behavior = self.class.new(@proxy, @conditions, @params, @defaults.merge(defaults), @options)
         yield behavior if block_given?
         behavior
       end
@@ -235,7 +299,7 @@ module Merb
           options[key] = (options[key] || []) + [value.freeze]
         end
 
-        behavior = self.class.new(@conditions, @params, @defaults, options)
+        behavior = self.class.new(@proxy, @conditions, @params, @defaults, options)
         yield behavior if block_given?
         behavior
       end
@@ -354,6 +418,13 @@ module Merb
       end
 
     private
+    
+      def with_behavior_context(behavior, &block)
+        @proxy.push(behavior)
+        retval = yield(behavior)
+        @proxy.pop
+        retval
+      end
 
       def merge_paths(path)
         [@conditions[:path], path.freeze].flatten.compact

@@ -80,7 +80,7 @@ module Merb
       # Compiles routes after block evaluation.
       def prepare(first = [], last = [], &block)
         self.routes = []
-        yield Behavior.new({}, {}, {:action => "index"})
+        yield Behavior.new(nil, {}, {}, {:action => "index"})
         self.routes = first + routes + last
         compile
         self
