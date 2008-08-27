@@ -201,8 +201,13 @@ module Merb
       def compile_generation
         ruby  = ""
         ruby << "lambda do |params|\n"
-        ruby << "query_params = params.dup\n"
-        ruby << "#{generation_block_for_level(segments)}\n"
+        ruby << "  query_params = params.dup\n"
+        ruby << "  return unless url = #{generation_block_for_level(segments)}\n"
+        ruby << "  query_params.delete_if { |key, value| value.nil? }\n"
+        ruby << "  unless query_params.empty?\n"
+        ruby << '    url << "?#{Merb::Request.params_to_query_string(query_params)}"' << "\n"
+        ruby << "  end\n"
+        ruby << "  url\n"
         ruby << "end\n"
         @generator = eval(ruby)
       end
@@ -210,8 +215,9 @@ module Merb
       def generation_block_for_level(segments)
         ruby  = ""
         ruby << "if #{generation_conditions_for_segment_level(segments)}\n"
-        ruby << "#{generation_optionals_for_segment_level(segments)}\n"
-        ruby << %{"#{combine_generation_bits_for_segment_level(segments)}"\n}
+        ruby << "  #{generation_remove_used_segments_in_query_path(segments)}\n"
+        ruby << "  #{generation_optionals_for_segment_level(segments)}\n"
+        ruby << %{ "#{combine_generation_bits_for_segment_level(segments)}"\n}
         ruby << "end"
       end
       
@@ -231,11 +237,16 @@ module Merb
         conditions.join(" && ")
       end
       
+      def generation_remove_used_segments_in_query_path(segments)
+        segments = segments.select { |s| Symbol === s }
+        "#{segments.inspect}.each { |s| query_params.delete(s) }"
+      end
+      
       def generation_optionals_for_segment_level(segments)
         optionals = []
         
         segments.each_with_index do |segment, i|
-          if Array === segment
+          if segment.is_a?(Array) && segment.any? { |s| !s.is_a?(String) }
             optionals << %{_optional_segments_#{segment.object_id} = #{generation_block_for_level(segment)}}
           end
         end
@@ -247,10 +258,11 @@ module Merb
         bits = ""
         
         segments.each_with_index do |segment, i|
-          bits << case segment
-            when String then segment
-            when Symbol then '#{cached_' + segment.to_s + '}'
-            when Array then '#{' + "_optional_segments_#{segment.object_id}" +'}'
+          bits << case
+            when segment.is_a?(String) then segment
+            when segment.is_a?(Symbol) then '#{cached_' + segment.to_s + '}'
+            when segment.is_a?(Array) && segment.any? { |s| !s.is_a?(String) } then '#{' + "_optional_segments_#{segment.object_id}" +'}'
+            else ""
           end
         end
         
