@@ -11,7 +11,7 @@ module Merb
       SEGMENT_CHARACTERS           = "[^\/.,;?]".freeze
 
       attr_reader :conditions, :params, :segments
-      attr_reader :index, :symbol, :variables
+      attr_reader :index, :variables, :name
       attr_reader :redirect_status, :redirect_url
       attr_accessor :fixation
 
@@ -60,19 +60,10 @@ module Merb
         self
       end
       
-      def name
-        @name
-      end
-      
       def name=(name)
         @name = name.to_sym
         Router.named_routes[@name] = self
         @name
-      end
-
-      def name(symbol)
-        raise ArgumentError.new("Route names must be symbols") unless Symbol === (@symbol = symbol)
-        Merb::Router.named_routes[@symbol] = self
       end
       
       # === Compiled method ===

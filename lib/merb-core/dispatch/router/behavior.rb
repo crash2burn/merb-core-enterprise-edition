@@ -12,6 +12,8 @@ module Merb
     # regular expressions in Behavior, so I store conditions[:path] as an Array.
     # Everytime a new condition[:path] is defined, it is appended to the Array.
     # All the logic to merge the elements of the Array is in Route.
+    # ---
+    # @private
     class Behavior
 
       class Error < StandardError; end;
@@ -163,28 +165,7 @@ module Merb
         behavior = Behavior.new(@proxy, @conditions.merge(conditions), @params, @defaults, @options)
         with_behavior_context(behavior, &block)
       end
-
-      def fixatable(enable = true)
-        @route.fixation = enable
-        self
-      end
-
-      def name(prefix, name = nil)
-        unless name
-          name, prefix = prefix, nil
-        end
-
-        full_name = [prefix, @options[:name_prefix], name].flatten.compact.join('_')
-        @route.name = full_name
-        
-        self
-      end
-
-      def full_name(symbol)
-        @route.name(symbol)
-        self
-      end
-
+      
       # Creates a Route from one or more Behavior objects, unless a +block+ is
       # passed in.
       #
@@ -220,12 +201,29 @@ module Merb
           behavior.to_route
         end
       end
-
+      
+      alias_method :register, :to
+      
+      # Sets default values for route parameters. If no value for the key
+      # can be extracted from the request, then the value provided here
+      # will be used.
+      #
+      # ==== Parameters
+      # defaults<Hash>::
+      #   The route's default values.
+      # &block::
+      #   Optional block. A new Behavior object is yielded scoped with
+      #   the current Behavior.
+      # ---
+      # @public
       def defaults(defaults = {}, &block)
         behavior = Behavior.new(@proxy, @conditions, @params, @defaults.merge(defaults), @options)
         with_behavior_context(behavior, &block)
       end
-
+      
+      # Sets various miscellaneous route options
+      # ---
+      # @public
       def options(opts = {}, &block)
         options = @options.dup
 
@@ -236,63 +234,7 @@ module Merb
         behavior = Behavior.new(@proxy, @conditions, @params, @defaults, options)
         with_behavior_context(behavior, &block)
       end
-
-      # Takes a block and stores it for deferred conditional routes. The block
-      # takes the +request+ object and the +params+ hash as parameters.
-      #
-      # ==== Parameters
-      # params<Hash>:: Parameters and conditions associated with this behavior.
-      # &conditional_block::
-      #   A block with the conditions to be met for the behavior to take
-      #   effect.
-      #
-      # ==== Returns
-      # Route :: The default route.
-      #
-      # ==== Examples
-      #   r.defer_to do |request, params|
-      #     params.merge :controller => 'here',
-      #       :action => 'there' if request.xhr?
-      #   end
-      #---
-      # @public
-      def defer_to(params = {}, &conditional_block)
-        to_route(params, &conditional_block)
-      end
-
-      # Creates the most common routes /:controller/:action/:id.format when
-      # called with no arguments.
-      # You can pass a hash or a block to add parameters or override the default
-      # behavior.
-      #
-      # ==== Parameters
-      # params<Hash>::
-      #   This optional hash can be used to augment the default settings
-      # &block::
-      #   When passing a block a new behavior is yielded and more refinement is
-      #   possible.
-      #
-      # ==== Returns
-      # Route:: the default route
-      #
-      # ==== Examples
-      #
-      #   # Passing an extra parameter "mode" to all matches
-      #   r.default_routes :mode => "default"
-      #
-      #   # specifying exceptions within a block
-      #   r.default_routes do |nr|
-      #     nr.defer_to do |request, params|
-      #       nr.match(:protocol => "http://").to(:controller => "login",
-      #         :action => "new") if request.env["REQUEST_URI"] =~ /\/private\//
-      #     end
-      #   end
-      #---
-      # @public
-      def default_routes(params = {}, &block)
-        match("/:controller(/:action(/:id))(.:format)").to(params, &block).name(:default)
-      end
-
+      
       # Creates a namespace for a route. This way you can have logical
       # separation to your routes.
       #
@@ -331,6 +273,92 @@ module Merb
         behavior = behavior.match("/#{path}") unless path.empty?
         behavior.options(opts, &block)
       end
+      
+      # Creates the most common routes /:controller/:action/:id.format when
+      # called with no arguments.
+      # You can pass a hash or a block to add parameters or override the default
+      # behavior.
+      #
+      # ==== Parameters
+      # params<Hash>::
+      #   This optional hash can be used to augment the default settings
+      # &block::
+      #   When passing a block a new behavior is yielded and more refinement is
+      #   possible.
+      #
+      # ==== Returns
+      # Route:: the default route
+      #
+      # ==== Examples
+      #
+      #   # Passing an extra parameter "mode" to all matches
+      #   r.default_routes :mode => "default"
+      #
+      #   # specifying exceptions within a block
+      #   r.default_routes do |nr|
+      #     nr.defer_to do |request, params|
+      #       nr.match(:protocol => "http://").to(:controller => "login",
+      #         :action => "new") if request.env["REQUEST_URI"] =~ /\/private\//
+      #     end
+      #   end
+      #---
+      # @public
+      def default_routes(params = {}, &block)
+        match("/:controller(/:action(/:id))(.:format)").to(params, &block).name(:default)
+      end
+      
+      # Takes a block and stores it for deferred conditional routes. The block
+      # takes the +request+ object and the +params+ hash as parameters.
+      #
+      # ==== Parameters
+      # params<Hash>:: Parameters and conditions associated with this behavior.
+      # &conditional_block::
+      #   A block with the conditions to be met for the behavior to take
+      #   effect.
+      #
+      # ==== Returns
+      # Route :: The default route.
+      #
+      # ==== Examples
+      #   r.defer_to do |request, params|
+      #     params.merge :controller => 'here',
+      #       :action => 'there' if request.xhr?
+      #   end
+      #---
+      # @public
+      def defer_to(params = {}, &conditional_block)
+        to_route(params, &conditional_block)
+      end
+      
+      # Names this route in Router. Name must be a Symbol.
+      #
+      # ==== Parameters
+      # symbol<Symbol>:: The name of the route.
+      #
+      # ==== Raises
+      # ArgumentError:: symbol is not a Symbol.
+      def name(prefix, name = nil)
+        unless name
+          name, prefix = prefix, nil
+        end
+
+        full_name = [prefix, @options[:name_prefix], name].flatten.compact.join('_')
+        @route.name = full_name
+        
+        self
+      end
+
+      def full_name(name)
+        @route.name = name
+        self
+      end
+      
+      # ==== Parameters
+      # enabled<Boolean>:: True enables fixation on the route.
+      def fixatable(enable = true)
+        @route.fixation = enable
+        self
+      end
 
       def redirect(url, permanent = true)
         raise Error, "The route has already been committed." if @route
@@ -340,7 +368,7 @@ module Merb
         @route.register
         self
       end
-
+      
     protected
       
       def to_route(params = {}, &conditional_block)
