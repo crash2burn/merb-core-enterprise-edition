@@ -89,20 +89,6 @@ module Merb
         stringify_condition_values
       end
 
-      # Register a new route.
-      #
-      # ==== Parameters
-      # path<String, Regex>:: The url path to match
-      # params<Hash>:: The parameters the new routes maps to.
-      #
-      # ==== Returns
-      # Route:: The resulting Route.
-      #---
-      # @public
-      def add(path, params = {})
-        match(path).to(params)
-      end
-
       # Matches a +path+ and any number of optional request methods as
       # conditions of a route. Alternatively, +path+ can be a hash of
       # conditions, in which case +conditions+ is ignored.
@@ -177,50 +163,6 @@ module Merb
         behavior = Behavior.new(@proxy, @conditions.merge(conditions), @params, @defaults, @options)
         yield behavior if block_given?
         behavior
-      end
-
-      # Combines common case of match being used with
-      # to({}).
-      #
-      # ==== Returns
-      # <Route>:: route that uses params from named path segments.
-      #
-      # ==== Examples
-      # r.match!("/api/:token/:controller/:action/:id")
-      #
-      # is the same thing as
-      #
-      # r.match!("/api/:token/:controller/:action/:id").to({})
-      def match!(path = '', conditions = {}, &block)
-        match(path, conditions, &block).to({})
-      end
-
-      def to_route(params = {}, &conditional_block)
-        params = @params.merge(params)
-
-        raise Error, "The route has already been committed." if @route
-
-        # Gah, this is pretty ugly
-        controller = params[:controller]
-        
-        if @options[:controller_prefix]
-          prefixes   = @options[:controller_prefix].compact
-          controller = controller || ":controller"
-          index      = prefixes.length - 1
-          
-          while index >= 0 && (pref = prefixes[index]) && controller !~ %r(^/)
-            controller = "#{pref}/#{controller}"
-            index -= 1
-          end
-        end
-        
-        if controller
-          controller = controller.to_s.gsub(%r[^/], '')
-          params.merge!(:controller => controller)
-        end
-        
-        @route = Route.new(@conditions.dup, params, :defaults => @defaults.dup, &conditional_block)
-        self
       end
 
       def fixatable(enable = true)
@@ -408,7 +350,37 @@ module Merb
       end
 
     protected
+      
+      def to_route(params = {}, &conditional_block)
+        params = @params.merge(params)
 
+        raise Error, "The route has already been committed." if @route
+
+        # Gah, this is pretty ugly
+        controller = params[:controller]
+        
+        if @options[:controller_prefix]
+          prefixes   = @options[:controller_prefix].compact
+          controller = controller || ":controller"
+          index      = prefixes.length - 1
+          
+          while index >= 0 && (pref = prefixes[index]) && controller !~ %r(^/)
+            controller = "#{pref}/#{controller}"
+            index -= 1
+          end
+        end
+        
+        if controller
+          controller = controller.to_s.gsub(%r[^/], '')
+          params.merge!(:controller => controller)
+        end
+        
+        @route = Route.new(@conditions.dup, params, :defaults => @defaults.dup, &conditional_block)
+        self
+      end
+
+    private
+    
       def stringify_condition_values
         @conditions.each do |key, value|
           unless value.nil? || Regexp === value || Array === value
@@ -416,8 +388,6 @@ module Merb
           end
         end
       end
-
-    private
     
       def with_behavior_context(behavior, &block)
         @proxy.push(behavior)

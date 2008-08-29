@@ -20,7 +20,7 @@ describe "When generating URLs," do
     
     # it "should be able to generate spiced up default routes" do
     #   Merb::Router.prepare do |r|
-    #     r.match!("/:account/:controller(/:action(/:id))(.:format)").name(:default)
+    #     r.match("/:account/:controller(/:action(/:id))(.:format)").to.name(:default)
     #   end
     #   
     #   url(:account => "ohyeah", :controller => "hello").should == "/ohyeah/hello"

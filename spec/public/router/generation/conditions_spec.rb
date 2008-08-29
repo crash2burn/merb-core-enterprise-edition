@@ -6,7 +6,7 @@ describe "When generating URLs," do
     
     it "should generate when the string condition is met" do
       Merb::Router.prepare do |r|
-        r.match!("/:account", :account => "walruses").name(:condition)
+        r.match("/:account", :account => "walruses").to.name(:condition)
       end
 
       url(:condition, :account => "walruses").should == "/walruses"
@@ -14,7 +14,7 @@ describe "When generating URLs," do
     
     it "should generate when the regexp condition that is met" do
       Merb::Router.prepare do |r|
-        r.match!("/:account", :account => /[a-z]+/).name(:condition)
+        r.match("/:account", :account => /[a-z]+/).to.name(:condition)
       end
 
       url(:condition, :account => "walruses").should == "/walruses"
@@ -22,7 +22,7 @@ describe "When generating URLs," do
 
     it "should not generate if the String condition is not met" do
       Merb::Router.prepare do |r|
-        r.match!("/:account", :account => "walruses").name(:condition)
+        r.match("/:account", :account => "walruses").to.name(:condition)
       end
 
       lambda { url(:condition, :account => "pecans") }.should raise_error(Merb::Router::GenerationError)
@@ -30,7 +30,7 @@ describe "When generating URLs," do
 
     it "should not generate if the Regexp condition is not met" do
       Merb::Router.prepare do |r|
-        r.match!("/:account", :account => /[a-z]+/).name(:condition)
+        r.match("/:account", :account => /[a-z]+/).to.name(:condition)
       end
 
       lambda { url(:condition, :account => "29") }.should raise_error(Merb::Router::GenerationError)
@@ -39,10 +39,10 @@ describe "When generating URLs," do
     it "should respect Regexp anchors" do
       Merb::Router.prepare do |r|
         r.match("/:account") do |a|
-          a.match!(:account => /^[a-z]+$/).name(:both )
-          a.match!(:account => /^[a-z]+/ ).name(:start)
-          a.match!(:account => /[a-z]+$/ ).name(:end  )
-          a.match!(:account => /[a-z]+/  ).name(:none )
+          a.match(:account => /^[a-z]+$/).to.name(:both )
+          a.match(:account => /^[a-z]+/ ).to.name(:start)
+          a.match(:account => /[a-z]+$/ ).to.name(:end  )
+          a.match(:account => /[a-z]+/  ).to.name(:none )
         end
       end
 
@@ -69,7 +69,7 @@ describe "When generating URLs," do
     
     it "should work with Regexp conditions that contain capturing parentheses" do
       Merb::Router.prepare do |r|
-        r.match!("/:domain", :domain => /[a-z]+\.(com|net)/).name(:condition)
+        r.match("/:domain", :domain => /[a-z]+\.(com|net)/).to.name(:condition)
       end
 
       url(:condition, :domain => "foobar.com").should == "/foobar.com"
@@ -78,7 +78,7 @@ describe "When generating URLs," do
 
     it "should work with Regexp conditions that contain non-capturing parentheses" do
       Merb::Router.prepare do |r|
-        r.match!("/:domain", :domain => /[a-z]+\.(com|net)/).name(:condition)
+        r.match("/:domain", :domain => /[a-z]+\.(com|net)/).to.name(:condition)
       end
 
       url(:condition, :domain => "foobar.com").should == "/foobar.com"
@@ -87,7 +87,7 @@ describe "When generating URLs," do
     
     it "should not take into consideration conditions on request methods" do
       Merb::Router.prepare do |r|
-        r.match!("/one/two", :method => :post).name(:simple)
+        r.match("/one/two", :method => :post).to.name(:simple)
       end
       
       url(:simple).should == "/one/two"
@@ -100,7 +100,7 @@ describe "When generating URLs," do
     
     before(:each) do
       Merb::Router.prepare do |r|
-        r.match!("/:one/:two", :one => "hello", :two => %r[^(world|moon)$]).name(:condition)
+        r.match("/:one/:two", :one => "hello", :two => %r[^(world|moon)$]).to.name(:condition)
       end
     end
 

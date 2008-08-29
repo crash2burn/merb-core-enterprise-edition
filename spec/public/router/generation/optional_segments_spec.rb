@@ -6,13 +6,13 @@ describe "When generating URLs," do
     
     before(:each) do
       Merb::Router.prepare do |r|
-        r.match!("/:foo(/:bar)").name(:optional)
+        r.match("/:foo(/:bar)").to.name(:optional)
       end
     end
 
     it "should not generate the optional segment when all segments are just strings" do
       Merb::Router.prepare do |r|
-        r.match!("/hello(/world)").name(:optional)
+        r.match("/hello(/world)").to.name(:optional)
       end
 
       url(:optional).should == "/hello"
@@ -20,7 +20,7 @@ describe "When generating URLs," do
 
     it "should not add the optional segment when the optional segment is just a string" do
       Merb::Router.prepare do |r|
-        r.match!("/:greets(/world)").name(:optional)
+        r.match("/:greets(/world)").to.name(:optional)
       end
 
       url(:optional, :greets => "goodbye").should == "/goodbye"
@@ -28,7 +28,7 @@ describe "When generating URLs," do
 
     it "should only generate the route's required segment if it contains no variables" do
       Merb::Router.prepare do |r|
-        r.match!("/hello(/:optional)").name(:optional)
+        r.match("/hello(/:optional)").to.name(:optional)
       end
 
       url(:optional).should == "/hello"
@@ -48,7 +48,7 @@ describe "When generating URLs," do
 
     it "should generate the full optional segment of the route when there are multiple variables in the optional segment" do
       Merb::Router.prepare do |r|
-        r.match!("/hello(/:foo/:bar)").name(:long_optional)
+        r.match("/hello(/:foo/:bar)").to.name(:long_optional)
       end
 
       url(:long_optional, :foo => "world", :bar => "hello").should == "/hello/world/hello"
@@ -56,7 +56,7 @@ describe "When generating URLs," do
 
     it "should not generate the optional segment of the route if all the parameters of that optional segment are not provided" do
       Merb::Router.prepare do |r|
-        r.match!("/hello(/:foo/:bar)").name(:long_optional)
+        r.match("/hello(/:foo/:bar)").to.name(:long_optional)
       end
 
       url(:long_optional, :foo => "world").should == "/hello?foo=world"
@@ -76,7 +76,7 @@ describe "When generating URLs," do
     
     before(:each) do
       Merb::Router.prepare do |r|
-        r.match!("/:controller(/:action(/:id))").name(:nested)
+        r.match("/:controller(/:action(/:id))").to.name(:nested)
       end
     end
 
@@ -114,7 +114,7 @@ describe "When generating URLs," do
     
     before(:each) do
       Merb::Router.prepare do |r|
-        r.match!("/:controller(/:action)(.:format)").name(:multi)
+        r.match("/:controller(/:action)(.:format)").to.name(:multi)
       end
     end
 
@@ -136,7 +136,7 @@ describe "When generating URLs," do
     
     before(:each) do
       Merb::Router.prepare do |r|
-        r.match!("/:controller(/:action(/:id))(.:format)").name(:default)
+        r.match("/:controller(/:action(/:id))(.:format)").to.name(:default)
       end
     end
 
