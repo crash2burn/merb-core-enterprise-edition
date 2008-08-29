@@ -6,9 +6,9 @@ describe Merb::Router do
     
     before(:each) do
       @builder_methods = [
-        :add, :match, :match!, :fixatable, :register,
-        :name, :full_name, :to, :defaults, :options, :defer_to,
-        :default_routes, :namespace, :redirect, :resources, :resource
+        :match, :to, :defaults, :options,
+        :fixatable, :name, :full_name, :defer_to, :default_routes,
+        :namespace, :redirect, :resources, :resource
       ]
     end
     

@@ -166,12 +166,7 @@ module Merb
       end
 
       def fixatable(enable = true)
-        @route.fixatable(enable)
-        self
-      end
-
-      def register
-        @route.register
+        @route.fixation = enable
         self
       end
 
@@ -224,7 +219,7 @@ module Merb
           yield behavior if block_given?
           behavior
         else
-          behavior.to_route(params).register
+          behavior.to_route(params)
         end
       end
 
@@ -266,7 +261,7 @@ module Merb
       #---
       # @public
       def defer_to(params = {}, &conditional_block)
-        to_route(params, &conditional_block).register
+        to_route(params, &conditional_block)
       end
 
       # Creates the most common routes /:controller/:action/:id.format when
@@ -345,7 +340,8 @@ module Merb
         raise Error, "The route has already been committed." if @route
 
         status = permanent ? 301 : 302
-        @route = Route.new(@conditions, {:url => url.freeze, :status => status.freeze}, :redirects => true).register
+        @route = Route.new(@conditions, {:url => url.freeze, :status => status.freeze}, :redirects => true)
+        @route.register
         self
       end
 
@@ -376,6 +372,7 @@ module Merb
         end
         
         @route = Route.new(@conditions.dup, params, :defaults => @defaults.dup, &conditional_block)
+        @route.register
         self
       end
 

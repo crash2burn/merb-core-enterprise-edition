@@ -63,7 +63,7 @@ describe "When recognizing requests," do
   describe "a route containing path variable conditions" do
     
     it "should match only if the condition is satisfied" do
-      Merb::Router.prepare { |r| r.match!("/foo/:bar", :bar => /\d+/) }
+      Merb::Router.prepare { |r| r.match("/foo/:bar", :bar => /\d+/).to }
       
       route_to("/foo/123").should have_route(:bar => "123")
       route_to("/foo/abc").should have_nil_route
@@ -88,7 +88,7 @@ describe "When recognizing requests," do
     
     it "should match only if all conditions are satisied" do
       Merb::Router.prepare do |r|
-        r.match!("/:foo/:bar", :foo => /abc/, :bar => /123/)
+        r.match("/:foo/:bar", :foo => /abc/, :bar => /123/).to
       end
       
       route_to("/abc/123").should   have_route(:foo => "abc",  :bar => "123")
@@ -102,7 +102,7 @@ describe "When recognizing requests," do
     
     it "should allow creating conditions that span default segment dividers" do
       Merb::Router.prepare do |r|
-        r.match!("/:controller", :controller => %r[^[a-z]+/[a-z]+$])
+        r.match("/:controller", :controller => %r[^[a-z]+/[a-z]+$]).to
       end
       
       route_to("/somewhere").should have_nil_route
@@ -111,7 +111,7 @@ describe "When recognizing requests," do
     
     it "should allow creating conditions that match everything" do
       Merb::Router.prepare do |r|
-        r.match!("/:glob", :glob => /.*/)
+        r.match("/:glob", :glob => /.*/).to
       end
       
       %w(somewhere somewhere/somehow 123/456/789 i;just/dont-understand).each do |path|
@@ -121,7 +121,7 @@ describe "When recognizing requests," do
     
     it "should allow greedy matches to preceed segments" do
       Merb::Router.prepare do |r|
-        r.match!("/foo/:bar/something/:else", :bar => /.*/)
+        r.match("/foo/:bar/something/:else", :bar => /.*/).to
       end
       
       %w(somewhere somewhere/somehow 123/456/789 i;just/dont-understand).each do |path|
@@ -131,7 +131,7 @@ describe "When recognizing requests," do
     
     it "should allow creating conditions that proceed a glob" do
       Merb::Router.prepare do |r|
-        r.match!("/:foo/bar/:glob", :glob => /.*/)
+        r.match("/:foo/bar/:glob", :glob => /.*/).to
       end
       
       %w(somewhere somewhere/somehow 123/456/789 i;just/dont-understand).each do |path|
@@ -142,7 +142,7 @@ describe "When recognizing requests," do
     
     it "should match only if all mixed conditions are satisied" do
       Merb::Router.prepare do |r|
-        r.match!("/:blog/post/:id", :blog => %r{^[a-zA-Z]+$}, :id => %r{^[0-9]+$})
+        r.match("/:blog/post/:id", :blog => %r{^[a-zA-Z]+$}, :id => %r{^[0-9]+$}).to
       end
       
       route_to("/superblog/post/123").should      have_route(:blog => "superblog",  :id => "123")
@@ -174,7 +174,7 @@ describe "When recognizing requests," do
     it "should be able to nest named segment variables" do
       Merb::Router.prepare do |r|
         r.match("/:first") do |first|
-          first.match!("/:second")
+          first.match("/:second").to
         end
       end
       
@@ -230,7 +230,7 @@ describe "When recognizing requests," do
     it "should be able to override previously set named segment variable conditions" do
       Merb::Router.prepare do |r|
         r.match("/:account", :account => /^\d+$/) do |account|
-          account.match!(:account => /^[a-z]+$/)
+          account.match(:account => /^[a-z]+$/).to
         end
       end
       
@@ -241,7 +241,7 @@ describe "When recognizing requests," do
     it "should be able to set conditions on named segment variables that haven't been used yet" do
       Merb::Router.prepare do |r|
         r.match(:account => /^[a-z]+$/) do |account|
-          account.match!("/:account")
+          account.match("/:account").to
         end
       end
       

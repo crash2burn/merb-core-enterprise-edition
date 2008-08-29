@@ -29,7 +29,7 @@ describe "Old specs" do
   it "allows wrapping of nested routes all having shared argument" do
     Merb::Router.prepare do |r|
       r.match('/:language') do |i18n|
-        i18n.match!('/:controller/:action')
+        i18n.match('/:controller/:action').to
       end
     end
     route_to('/fr/hotels/search').should have_route(:controller => 'hotels', :action => "search", :language => "fr")

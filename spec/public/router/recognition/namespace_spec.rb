@@ -18,7 +18,7 @@ describe "When recognizing requests," do
       Merb::Router.prepare do |r|
         r.to(:controller => "bars") do |bars|
           bars.namespace(:admin) do |admin|
-            admin.match!("/foo")
+            admin.match("/foo").to
           end
         end
       end
@@ -30,7 +30,7 @@ describe "When recognizing requests," do
       Merb::Router.prepare do |r|
         r.match("/:controller") do |c|
           c.namespace(:marketing) do |marketing|
-            marketing.to_route.register
+            marketing.to
           end
         end
       end

@@ -6,7 +6,7 @@ describe "A route derived from the blocks of #match" do
   # must be specified in #to instead of #match. #match is now reserved for
   # conditions on named segments and Request methods.
   # == Example:
-  # Old:    r.match!("/foo", :controller => "foos", :action => "index")
+  # Old:    r.match("/foo", :controller => "foos", :action => "index").to
   # New:    r.match("/foo").to(:controller => "foos", :action => "index")
 
   it "should inherit the :controller option." do

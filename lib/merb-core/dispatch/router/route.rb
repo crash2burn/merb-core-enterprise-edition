@@ -10,9 +10,10 @@ module Merb
       JUST_BRACKETS                = /\[(\d+)\]/
       SEGMENT_CHARACTERS           = "[^\/.,;?]".freeze
 
-      attr_reader :conditions
-      attr_reader :params, :segments, :index, :symbol, :variables
+      attr_reader :conditions, :params, :segments
+      attr_reader :index, :symbol, :variables
       attr_reader :redirect_status, :redirect_url
+      attr_accessor :fixation
 
       def initialize(conditions, params, options = {}, &conditional_block)
         @conditions, @params = conditions, params
@@ -30,7 +31,6 @@ module Merb
         @segments          = []
         @symbol_conditions = {}
         @placeholders      = {}
-        @fixation          = false
         compile
       end
 
@@ -40,11 +40,6 @@ module Merb
 
       def allow_fixation?
         @fixation
-      end
-
-      def fixatable(enable = true)
-        @fixation = enable
-        self
       end
 
       def redirects?
@@ -69,41 +64,6 @@ module Merb
         raise ArgumentError.new("Route names must be symbols") unless Symbol === (@symbol = symbol)
         Merb::Router.named_routes[@symbol] = self
       end
-
-      # # This is a temporary implementation to get the specs to pass
-      # def generate(params = {})
-      #   raise GenerationError, "Cannot generate regexp Routes" if regexp?
-      #   query_params = params.dup
-      #   
-      #   # --- A little dancing to get the old merb specs to pass ---
-      #   
-      #   # Any required parameter that looks like an association ID and
-      #   # is missing should be fetched from the resource.
-      #   variables.each do |v|
-      #     if v.to_s =~ /_id$/ && params[:id].respond_to?(v)
-      #       params[v] ||= params[:id].send(v)
-      #     end
-      #   end
-      #   
-      #   # If any param responds to to_param, then that return value should
-      #   # be used instead.
-      #   params.each do |key, value|
-      #     params[key] = value.to_param if value.respond_to?(:to_param)
-      #   end
-      #   
-      #   # --- Our little dance is finished ---
-      #   
-      #   # Generate the path part of the URL from the segments
-      #   if url = segment_group_to_string(segments, params, query_params, true)
-      #     # Query params
-      #     query_params.delete_if { |key, value| value.nil? }
-      #     unless query_params.empty?
-      #       url << "?" + Merb::Request.params_to_query_string(query_params)
-      #     end
-      # 
-      #     return url
-      #   end
-      # end
       
       # === Compiled method ===
       def generate(params = {})
@@ -143,50 +103,6 @@ module Merb
       end
 
     private
-
-    # === Generation ===
-
-      # # Checks if the supplied parameters are sufficient to generate the supplied
-      # # segment group. Before an optional segment group is generated, it must be
-      # # verified that the group can be generated with the supplied parameters.
-      # # ===
-      # # TODO: Yeah, this is temporary and needs to be completely redone (after the specs pass)
-      # def matches_segment_group?(group, params = {})
-      #   group.all? do |segment|
-      #     # params[segment] &&
-      #     #   (@symbol_conditions[segment].nil? || @symbol_conditions[segment] =~ params[segment])
-      #     condition = @symbol_conditions[segment]
-      #     param = params[segment]
-      #     param && (condition.nil? || (condition.is_a?(String) ? condition == param : condition =~ param))
-      #   end
-      # end
-
-      # # Everytime that a param is used to generate a segment, the key should be be
-      # # deleted from query_params. This is so that they query params part of the
-      # # URL can be generated at the end.
-      # # ===
-      # # TODO: Yeah, this is temporary and needs to be completely redone (after the specs pass)
-      # def segment_group_to_string(group, params = {}, query_params = {}, validate = false)
-      #   if validate && !matches_segment_group?(group.select { |s| Symbol === s }, params)
-      #     return nil
-      #   end
-      # 
-      #   group.map do |segment|
-      #     if Array === segment
-      #       # if the array is entirely Strings, then don't generate it. Originally
-      #       # I generated the extra bit, but it turned out to be ugly when it came
-      #       # to generating resource routes (it would append /index to the collection
-      #       # index route).
-      #       segment_group_to_string(segment, params, query_params, true) unless
-      #         segment.all? { |s| String === s }
-      #     elsif Symbol === segment
-      #       query_params.delete(segment)
-      #       params[segment]
-      #     else
-      #       segment
-      #     end
-      #   end.join
-      # end
       
     # === Compilation ===
 

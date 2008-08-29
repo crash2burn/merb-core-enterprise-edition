@@ -29,7 +29,7 @@ describe "When recognizing requests," do
     it "should only contain an :action key if no params are defined" do
       # This because all routes have :action => "index" as a default
       Merb::Router.prepare do |r|
-        r.match('/hello').to_route.register
+        r.match('/hello').to
       end
 
       route_to('/hello').should have_exact_route(:action => "index")
@@ -37,7 +37,7 @@ describe "When recognizing requests," do
 
     it "should be able to extract named segments as params" do
       Merb::Router.prepare do |r|
-        r.match!('/:foo')
+        r.match('/:foo').to
       end
 
       route_to('/bar').should have_route(:foo => "bar")
@@ -45,7 +45,7 @@ describe "When recognizing requests," do
 
     it "should be able to extract multiple named segments as params" do
       Merb::Router.prepare do |r|
-        r.match!("/:foo/:faz")
+        r.match("/:foo/:faz").to
       end
 
       route_to("/bar/baz").should have_route(:foo => "bar", :faz => "baz")
@@ -53,7 +53,7 @@ describe "When recognizing requests," do
 
     it "should not extract a named segment if it did not match the condition assigned to it" do
       Merb::Router.prepare do |r|
-        r.match!("/:foo", :foo => /^[a-z]$/)
+        r.match("/:foo", :foo => /^[a-z]$/).to
       end
 
       route_to("/123").should_not have_route(:foo => "123")
@@ -180,7 +180,7 @@ describe "When recognizing requests," do
     it "should be preserved through condition blocks" do
       Merb::Router.prepare do |r|
         r.to(:controller => "foo") do |f|
-          f.match!('/blah')
+          f.match('/blah').to
         end
       end
       
@@ -190,7 +190,7 @@ describe "When recognizing requests," do
     it "should preserve existing defaults" do
       Merb::Router.prepare do |r|
         r.defaults(:action => "bar").to(:controller => "foo") do |a|
-          a.match!("/(:action)")
+          a.match("/(:action)").to
         end
       end
       
@@ -200,7 +200,7 @@ describe "When recognizing requests," do
     it "should be preserved through defaults blocks" do
       Merb::Router.prepare do |r|
         r.to(:controller => "foo") do |f|
-          f.defaults(:action => "bar").match!("/blah")
+          f.defaults(:action => "bar").match("/blah").to
         end
       end
       
