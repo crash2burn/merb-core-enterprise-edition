@@ -59,6 +59,16 @@ module Merb
         Merb::Router.routes << self
         self
       end
+      
+      def name
+        @name
+      end
+      
+      def name=(name)
+        @name = name.to_sym
+        Router.named_routes[@name] = self
+        @name
+      end
 
       def name(symbol)
         raise ArgumentError.new("Route names must be symbols") unless Symbol === (@symbol = symbol)

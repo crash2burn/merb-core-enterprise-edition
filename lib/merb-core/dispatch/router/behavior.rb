@@ -79,7 +79,7 @@ module Merb
       # Behavior:: The initialized Behavior object
       #---
       # @private
-      def initialize(proxy = nil, conditions = {}, params = {}, defaults = { :action => "index" }, options = {})
+      def initialize(proxy = Proxy.new, conditions = {}, params = {}, defaults = { :action => "index" }, options = {})
         @proxy      = proxy
         @conditions = conditions
         @params     = params
@@ -161,8 +161,7 @@ module Merb
         raise Error, "The route has already been committed. Further conditions cannot be specified" if @route
 
         behavior = Behavior.new(@proxy, @conditions.merge(conditions), @params, @defaults, @options)
-        yield behavior if block_given?
-        behavior
+        with_behavior_context(behavior, &block)
       end
 
       def fixatable(enable = true)
@@ -170,14 +169,14 @@ module Merb
         self
       end
 
-      def name(prefix, symbol = nil)
-        unless symbol
-          symbol, prefix = prefix, nil
+      def name(prefix, name = nil)
+        unless name
+          name, prefix = prefix, nil
         end
 
-        name = [prefix, @options[:name_prefix], symbol].flatten.compact.join('_')
-        @route.name(name.intern)
-
+        full_name = [prefix, @options[:name_prefix], name].flatten.compact.join('_')
+        @route.name = full_name
+        
         self
       end
 
@@ -216,29 +215,26 @@ module Merb
         behavior = Behavior.new(@proxy, @conditions, @params.merge(params), @defaults, @options)
         
         if block_given?
-          yield behavior if block_given?
-          behavior
+          with_behavior_context(behavior, &block)
         else
-          behavior.to_route(params)
+          behavior.to_route
         end
       end
 
       def defaults(defaults = {}, &block)
         behavior = Behavior.new(@proxy, @conditions, @params, @defaults.merge(defaults), @options)
-        yield behavior if block_given?
-        behavior
+        with_behavior_context(behavior, &block)
       end
 
       def options(opts = {}, &block)
         options = @options.dup
 
         opts.each_pair do |key, value|
-          options[key] = (options[key] || []) + [value.freeze]
+          options[key] = (options[key] || []) + [value.freeze] if value
         end
 
         behavior = Behavior.new(@proxy, @conditions, @params, @defaults, options)
-        yield behavior if block_given?
-        behavior
+        with_behavior_context(behavior, &block)
       end
 
       # Takes a block and stores it for deferred conditional routes. The block
@@ -348,28 +344,22 @@ module Merb
     protected
       
       def to_route(params = {}, &conditional_block)
-        params = @params.merge(params)
-
+        
         raise Error, "The route has already been committed." if @route
 
-        # Gah, this is pretty ugly
+        params     = @params.merge(params)
         controller = params[:controller]
-        
-        if @options[:controller_prefix]
-          prefixes   = @options[:controller_prefix].compact
-          controller = controller || ":controller"
-          index      = prefixes.length - 1
+
+        if prefixes = @options[:controller_prefix]
+          controller ||= ":controller"
           
-          while index >= 0 && (pref = prefixes[index]) && controller !~ %r(^/)
-            controller = "#{pref}/#{controller}"
-            index -= 1
+          prefixes.reverse_each do |prefix|
+            break if controller =~ %r{^/(.*)} && controller = $1
+            controller = "#{prefix}/#{controller}"
           end
         end
         
-        if controller
-          controller = controller.to_s.gsub(%r[^/], '')
-          params.merge!(:controller => controller)
-        end
+        params.merge!(:controller => controller.to_s.gsub(%r{^/}, '')) if controller
         
         @route = Route.new(@conditions.dup, params, :defaults => @defaults.dup, &conditional_block)
         @route.register
@@ -387,10 +377,12 @@ module Merb
       end
     
       def with_behavior_context(behavior, &block)
-        @proxy.push(behavior)
-        retval = yield(behavior)
-        @proxy.pop
-        retval
+        if block_given?
+          @proxy.push(behavior)
+          retval = yield(behavior)
+          @proxy.pop
+        end
+        behavior
       end
 
       def merge_paths(path)

@@ -143,6 +143,16 @@ describe "When recognizing requests," do
       
       route_to("/").should have_route(:controller => "home")
     end
+    
+    it "should accept a Symbol for :controller in a namespace" do
+      Merb::Router.prepare do |r|
+        r.namespace(:admin) do |a|
+          a.to(:controller => :home)
+        end
+      end
+      
+      route_to("/admin").should have_route(:controller => "admin/home")
+    end
   end
   
   describe "a route with nested to blocks" do

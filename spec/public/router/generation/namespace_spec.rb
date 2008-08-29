@@ -10,7 +10,7 @@ describe "When generating URLs," do
           a.match("/login").to(:controller => "home").name(:login)
         end
       end
-      
+
       url(:admin_login).should == "/admin/login"
     end
     
