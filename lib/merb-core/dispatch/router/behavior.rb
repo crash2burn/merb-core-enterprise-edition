@@ -79,7 +79,7 @@ module Merb
       # Behavior:: The initialized Behavior object
       #---
       # @private
-      def initialize(proxy, conditions = {}, params = {}, defaults = {}, options = {})
+      def initialize(proxy = nil, conditions = {}, params = {}, defaults = { :action => "index" }, options = {})
         @proxy      = proxy
         @conditions = conditions
         @params     = params
@@ -174,7 +174,7 @@ module Merb
 
         raise Error, "The route has already been committed. Further conditions cannot be specified" if @route
 
-        behavior = self.class.new(@proxy, @conditions.merge(conditions), @params, @defaults, @options)
+        behavior = Behavior.new(@proxy, @conditions.merge(conditions), @params, @defaults, @options)
         yield behavior if block_given?
         behavior
       end
@@ -205,7 +205,7 @@ module Merb
         
         if @options[:controller_prefix]
           prefixes   = @options[:controller_prefix].compact
-          controller = params[:controller] || ":controller"
+          controller = controller || ":controller"
           index      = prefixes.length - 1
           
           while index >= 0 && (pref = prefixes[index]) && controller !~ %r(^/)
@@ -276,7 +276,7 @@ module Merb
       def to(params = {}, &block)
         raise Error, "The route has already been committed. Further params cannot be specified" if @route
 
-        behavior = self.class.new(@proxy, @conditions, @params.merge(params), @defaults, @options)
+        behavior = Behavior.new(@proxy, @conditions, @params.merge(params), @defaults, @options)
         
         if block_given?
           yield behavior if block_given?
@@ -287,7 +287,7 @@ module Merb
       end
 
       def defaults(defaults = {}, &block)
-        behavior = self.class.new(@proxy, @conditions, @params, @defaults.merge(defaults), @options)
+        behavior = Behavior.new(@proxy, @conditions, @params, @defaults.merge(defaults), @options)
         yield behavior if block_given?
         behavior
       end
@@ -299,7 +299,7 @@ module Merb
           options[key] = (options[key] || []) + [value.freeze]
         end
 
-        behavior = self.class.new(@proxy, @conditions, @params, @defaults, options)
+        behavior = Behavior.new(@proxy, @conditions, @params, @defaults, options)
         yield behavior if block_given?
         behavior
       end
