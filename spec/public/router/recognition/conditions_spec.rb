@@ -17,6 +17,14 @@ describe "When recognizing requests," do
     it "should not match a different path" do
       route_to("/notinfo").should have_nil_route
     end
+    
+    it "should match the route without using the yielded builder" do
+      Merb::Router.prepare do
+        match("/info").to(:controller => "info", :action => "foo")
+      end
+      
+      route_to("/info").should have_route(:controller => "info", :action => "foo")
+    end
   end
   
   describe "a route with a Request method condition" do
@@ -169,6 +177,16 @@ describe "When recognizing requests," do
       end
       
       route_to("/foo/bar").should have_route(:controller => "one/two", :action => "baz")
+    end
+    
+    it "should match the route without using the yielded builder" do
+      Merb::Router.prepare do
+        match("/foo") do
+          match("/bar").to(:controller => "one/two")
+        end
+      end
+      
+      route_to("/foo/bar").should have_route(:controller => "one/two")
     end
     
     it "should be able to nest named segment variables" do

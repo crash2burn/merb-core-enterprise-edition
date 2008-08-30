@@ -21,8 +21,8 @@ module Merb
   #
   # Compilation is synchronized by mutex.
   class Router
-    @@routes = []
-    @@named_routes = {}
+    @@routes         = []
+    @@named_routes   = {}
     @@compiler_mutex = Mutex.new
 
     # Raised when route lookup fails.
@@ -80,7 +80,7 @@ module Merb
       # Compiles routes after block evaluation.
       def prepare(first = [], last = [], &block)
         self.routes = []
-        yield Behavior.new
+        Behavior::Proxy.new.instance_eval(&block)
         self.routes = first + routes + last
         compile
         self

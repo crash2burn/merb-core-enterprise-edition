@@ -26,10 +26,10 @@ module Merb
       class Proxy
         # Undefine as many methods as possible so that everything can be proxied
         # along to the behavior
-        instance_methods.each { |m| undef_method m unless %w[ __id__ __send__ class kind_of? respond_to? assert_kind_of should should_not instance_variable_set instance_variable_get ].include?(m) }
+        instance_methods.each { |m| undef_method m unless %w[ __id__ __send__ class kind_of? respond_to? assert_kind_of should should_not instance_variable_set instance_variable_get instance_eval].include?(m) }
         
         def initialize
-          @behaviors = []
+          @behaviors = [Behavior.new(self).defaults(:action => "index")]
         end
         
         def push(behavior)
@@ -40,8 +40,13 @@ module Merb
           @behaviors.pop
         end
         
+        def last
+          raise 'damn'
+          @behaviors.last
+        end
+        
         def respond_to?(*args)
-          super || @behavors.last.respond_to?(*args)
+          super || @behaviors.last.respond_to?(*args)
         end
         
       private
@@ -81,7 +86,7 @@ module Merb
       # Behavior:: The initialized Behavior object
       #---
       # @private
-      def initialize(proxy = Proxy.new, conditions = {}, params = {}, defaults = { :action => "index" }, options = {})
+      def initialize(proxy = nil, conditions = {}, params = {}, defaults = {}, options = {})
         @proxy      = proxy
         @conditions = conditions
         @params     = params
