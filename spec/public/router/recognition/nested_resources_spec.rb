@@ -3,19 +3,19 @@ require File.join(File.dirname(__FILE__), "..", "spec_helper")
 describe "Recognizing requests for nested resources routes" do
   
   before(:each) do
-    Merb::Router.prepare do |r|
-      r.resources :blogposts do |b|
+    Merb::Router.prepare do
+      resources :blogposts do |b|
         b.resources :comments do |c|
           c.resources :versions
         end
       end
-      r.resources :users do |u|
+      resources :users do |u|
         u.resources :comments
       end
-      r.resource :foo do |f|
+      resource :foo do |f|
         f.resources :comments
       end
-      r.resources :domains, :keys => [:domain] do |d|
+      resources :domains, :keys => [:domain] do |d|
         d.resources :emails, :keys => [:username]
       end
     end

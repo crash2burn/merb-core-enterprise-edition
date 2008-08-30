@@ -16,8 +16,8 @@ describe "Recognizing requests for the routes with" do
   
   describe "a single optional segment" do
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.match("/:first(/:second/:third)").to
+      Merb::Router.prepare do
+        match("/:first(/:second/:third)").to
       end
     end
     
@@ -28,16 +28,16 @@ describe "Recognizing requests for the routes with" do
     end
     
     it "should not match the optional segment if the optional segment is present but doesn't match a named segment condition" do
-      Merb::Router.prepare do |r|
-        r.match("/:first(/:second)", :second => /^\d+$/).to
+      Merb::Router.prepare do
+        match("/:first(/:second)", :second => /^\d+$/).to
       end
       
       route_to("/hello/world").should have_nil_route
     end
     
     it "should not match if the optional segment is present but not the required segment" do
-      Merb::Router.prepare do |r|
-        r.match("/:first(/:second)", :first => /^[a-z]+$/, :second => /^\d+$/).to
+      Merb::Router.prepare do
+        match("/:first(/:second)", :first => /^[a-z]+$/, :second => /^\d+$/).to
       end
       
       route_to("/123").should have_nil_route
@@ -46,8 +46,8 @@ describe "Recognizing requests for the routes with" do
   
   describe "multiple optional segments" do
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.match("/:first(/:second)(/:third)").to
+      Merb::Router.prepare do
+        match("/:first(/:second)(/:third)").to
       end
     end
     
@@ -58,8 +58,8 @@ describe "Recognizing requests for the routes with" do
     end
     
     it "should be able to distinguish the optional segments when there are conditions on them" do
-      Merb::Router.prepare do |r|
-        r.match("/:first(/:second)(/:third)", :second => /^\d+$/).to
+      Merb::Router.prepare do
+        match("/:first(/:second)(/:third)", :second => /^\d+$/).to
       end
       
       route_to("/hello/world").should have_route(:first => "hello", :second => nil, :third => "world")
@@ -67,8 +67,8 @@ describe "Recognizing requests for the routes with" do
     end
     
     it "should not match any of the optional segments if the segments can't be matched" do
-      Merb::Router.prepare do |r|
-        r.match("(/:first/abc)(/:bar)").to
+      Merb::Router.prepare do
+        match("(/:first/abc)(/:bar)").to
       end
       
       route_to("/abc/hello").should have_nil_route
@@ -78,8 +78,8 @@ describe "Recognizing requests for the routes with" do
   
   describe "nested optional segments" do
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.match("/:first(/:second(/:third))").to
+      Merb::Router.prepare do
+        match("/:first(/:second(/:third))").to
       end
     end
     
@@ -90,8 +90,8 @@ describe "Recognizing requests for the routes with" do
     end
     
     it "should not match the nested optional group unless the containing optional group matches" do
-      Merb::Router.prepare do |r|
-        r.match("/:first(/:second(/:third))", :second => /^\d+$/).to
+      Merb::Router.prepare do
+        match("/:first(/:second(/:third))", :second => /^\d+$/).to
       end
       
       route_to("/hello/world").should have_nil_route
@@ -100,8 +100,8 @@ describe "Recognizing requests for the routes with" do
   
   describe "nested match blocks with optional segments" do
     it "should allow wrapping of nested routes all having a shared optional segment" do
-      Merb::Router.prepare do |r|
-        r.match("(/:language)") do |l|
+      Merb::Router.prepare do
+        match("(/:language)") do |l|
           l.match("/guides/:action/:id").to(:controller => "tour_guides")
         end
       end

@@ -3,8 +3,8 @@ require File.join(File.dirname(__FILE__), "..", "spec_helper")
 describe "Recognizing requests for the default routes" do
   
   before :each do
-    Merb::Router.prepare do|r|
-      r.default_routes
+    Merb::Router.prepare do
+      default_routes
     end
   end
     

@@ -5,8 +5,8 @@ describe "When recognizing requests," do
   describe "a route with a String path condition" do
     
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.match("/info").to(:controller => "info", :action => "foo")
+      Merb::Router.prepare do
+        match("/info").to(:controller => "info", :action => "foo")
       end
     end
     
@@ -19,6 +19,7 @@ describe "When recognizing requests," do
     end
     
     it "should match the route without using the yielded builder" do
+      pending "Switch this to prepare do |r|"
       Merb::Router.prepare do
         match("/info").to(:controller => "info", :action => "foo")
       end
@@ -30,8 +31,8 @@ describe "When recognizing requests," do
   describe "a route with a Request method condition" do
     
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.match(:method => :post).to(:controller => "all", :action => "posting")
+      Merb::Router.prepare do
+        match(:method => :post).to(:controller => "all", :action => "posting")
       end
     end
     
@@ -50,8 +51,8 @@ describe "When recognizing requests," do
   describe "a route with Request protocol condition and a path condition" do
     
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.match("/foo", :protocol => "http://").to(:controller => "plain", :action => "text")
+      Merb::Router.prepare do
+        match("/foo", :protocol => "http://").to(:controller => "plain", :action => "text")
       end
     end
     
@@ -78,8 +79,8 @@ describe "When recognizing requests," do
     end
     
     it "should be able to handle conditions with anchors" do
-      Merb::Router.prepare do |r|
-        r.match("/foo/:bar") do |bar|
+      Merb::Router.prepare do
+        match("/foo/:bar") do |bar|
           bar.match(:bar => /^\d+$/).to(:controller => "both")
           bar.match(:bar => /^\d+/ ).to(:controller => "start")
           bar.match(:bar => /\d+$/ ).to(:controller => "end")
@@ -95,8 +96,8 @@ describe "When recognizing requests," do
     end
     
     it "should match only if all conditions are satisied" do
-      Merb::Router.prepare do |r|
-        r.match("/:foo/:bar", :foo => /abc/, :bar => /123/).to
+      Merb::Router.prepare do
+        match("/:foo/:bar", :foo => /abc/, :bar => /123/).to
       end
       
       route_to("/abc/123").should   have_route(:foo => "abc",  :bar => "123")
@@ -109,8 +110,8 @@ describe "When recognizing requests," do
     end
     
     it "should allow creating conditions that span default segment dividers" do
-      Merb::Router.prepare do |r|
-        r.match("/:controller", :controller => %r[^[a-z]+/[a-z]+$]).to
+      Merb::Router.prepare do
+        match("/:controller", :controller => %r[^[a-z]+/[a-z]+$]).to
       end
       
       route_to("/somewhere").should have_nil_route
@@ -118,8 +119,8 @@ describe "When recognizing requests," do
     end
     
     it "should allow creating conditions that match everything" do
-      Merb::Router.prepare do |r|
-        r.match("/:glob", :glob => /.*/).to
+      Merb::Router.prepare do
+        match("/:glob", :glob => /.*/).to
       end
       
       %w(somewhere somewhere/somehow 123/456/789 i;just/dont-understand).each do |path|
@@ -128,8 +129,8 @@ describe "When recognizing requests," do
     end
     
     it "should allow greedy matches to preceed segments" do
-      Merb::Router.prepare do |r|
-        r.match("/foo/:bar/something/:else", :bar => /.*/).to
+      Merb::Router.prepare do
+        match("/foo/:bar/something/:else", :bar => /.*/).to
       end
       
       %w(somewhere somewhere/somehow 123/456/789 i;just/dont-understand).each do |path|
@@ -138,8 +139,8 @@ describe "When recognizing requests," do
     end
     
     it "should allow creating conditions that proceed a glob" do
-      Merb::Router.prepare do |r|
-        r.match("/:foo/bar/:glob", :glob => /.*/).to
+      Merb::Router.prepare do
+        match("/:foo/bar/:glob", :glob => /.*/).to
       end
       
       %w(somewhere somewhere/somehow 123/456/789 i;just/dont-understand).each do |path|
@@ -149,8 +150,8 @@ describe "When recognizing requests," do
     end
     
     it "should match only if all mixed conditions are satisied" do
-      Merb::Router.prepare do |r|
-        r.match("/:blog/post/:id", :blog => %r{^[a-zA-Z]+$}, :id => %r{^[0-9]+$}).to
+      Merb::Router.prepare do
+        match("/:blog/post/:id", :blog => %r{^[a-zA-Z]+$}, :id => %r{^[0-9]+$}).to
       end
       
       route_to("/superblog/post/123").should      have_route(:blog => "superblog",  :id => "123")
@@ -172,8 +173,8 @@ describe "When recognizing requests," do
   describe "a route built with nested conditions" do
     
     it "should support block matchers as a path namespace" do
-      Merb::Router.prepare do |r|
-        r.match("/foo") { |path| path.match("/bar").to(:controller => "one/two", :action => "baz") }
+      Merb::Router.prepare do
+        match("/foo") { |path| path.match("/bar").to(:controller => "one/two", :action => "baz") }
       end
       
       route_to("/foo/bar").should have_route(:controller => "one/two", :action => "baz")
@@ -190,8 +191,8 @@ describe "When recognizing requests," do
     end
     
     it "should be able to nest named segment variables" do
-      Merb::Router.prepare do |r|
-        r.match("/:first") do |first|
+      Merb::Router.prepare do
+        match("/:first") do |first|
           first.match("/:second").to
         end
       end
@@ -201,8 +202,8 @@ describe "When recognizing requests," do
     end
     
     it "should be able to define a route and still use the context for more route definition" do
-      Merb::Router.prepare do |r|
-        r.match("/hello") do |h|
+      Merb::Router.prepare do
+        match("/hello") do |h|
           h.to(:controller => "foo", :action => "bar")
           h.match("/world").to(:controller => "hello", :action => "world")
         end
@@ -213,8 +214,8 @@ describe "When recognizing requests," do
     end
     
     it "should be able to add blank paths without effecting the actual path" do
-      Merb::Router.prepare do |r|
-        r.match("/foo") do |p|
+      Merb::Router.prepare do
+        match("/foo") do |p|
           p.match("").to(:controller => "one/two", :action => "index")
         end
       end
@@ -223,8 +224,8 @@ describe "When recognizing requests," do
     end
     
     it "should be able to merge path and request method conditions" do
-      Merb::Router.prepare do |r|
-        r.match("/:controller") do |f|
+      Merb::Router.prepare do
+        match("/:controller") do |f|
           f.match(:protocol => "https://").to(:action => "bar")
         end
       end
@@ -234,8 +235,8 @@ describe "When recognizing requests," do
     end
     
     it "should be able to override previously set Request method conditions" do
-      Merb::Router.prepare do |r|
-        r.match(:domain => "foo.com") do |foo|
+      Merb::Router.prepare do
+        match(:domain => "foo.com") do |foo|
           foo.match("/", :domain => "bar.com").to(:controller => "bar", :action => "com")
         end
       end
@@ -246,8 +247,8 @@ describe "When recognizing requests," do
     end
     
     it "should be able to override previously set named segment variable conditions" do
-      Merb::Router.prepare do |r|
-        r.match("/:account", :account => /^\d+$/) do |account|
+      Merb::Router.prepare do
+        match("/:account", :account => /^\d+$/) do |account|
           account.match(:account => /^[a-z]+$/).to
         end
       end
@@ -257,8 +258,8 @@ describe "When recognizing requests," do
     end
     
     it "should be able to set conditions on named segment variables that haven't been used yet" do
-      Merb::Router.prepare do |r|
-        r.match(:account => /^[a-z]+$/) do |account|
+      Merb::Router.prepare do
+        match(:account => /^[a-z]+$/) do |account|
           account.match("/:account").to
         end
       end
@@ -268,8 +269,8 @@ describe "When recognizing requests," do
     end
     
     it "should be able to merge path and request method conditions when both kinds are specified in the parent match statement" do
-      Merb::Router.prepare do |r|
-        r.match("/:controller", :protocol => "https://") do |f|
+      Merb::Router.prepare do
+        match("/:controller", :protocol => "https://") do |f|
           f.match("/greets").to(:action => "bar")
         end
       end
@@ -282,8 +283,8 @@ describe "When recognizing requests," do
     
     it "allows wrapping of nested routes all having shared argument with PREDEFINED VALUES" do
       pending "I'm not sure which file this spec should live."
-      Merb::Router.prepare do |r|
-        r.match(/\/?(en|es|fr|be|nl)?/).to(:language => "[1]") do |l|
+      Merb::Router.prepare do
+        match(/\/?(en|es|fr|be|nl)?/).to(:language => "[1]") do |l|
           l.match("/guides/:action/:id").to(:controller => "tour_guides")
         end
       end
@@ -304,8 +305,8 @@ describe "When recognizing requests," do
 
   describe "multiple routes" do
     it "should not leak conditions" do
-      Merb::Router.prepare do |r|
-        r.match("/root") do |r|
+      Merb::Router.prepare do
+        match("/root") do |r|
           r.match('/foo').to
           r.match('/bar').to(:hello => "world")
         end

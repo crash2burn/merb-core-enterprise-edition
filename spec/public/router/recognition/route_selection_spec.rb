@@ -16,8 +16,8 @@ describe "Old specs" do
   end
   
   it "should inherit the parameters through many levels" do
-    Merb::Router.prepare do |r|
-      r.match('/alpha').to(:controller=>'Alphas') do |alpha|
+    Merb::Router.prepare do
+      match('/alpha').to(:controller=>'Alphas') do |alpha|
         alpha.match('/beta').to(:action=>'normal') do |beta|
           beta.match('/:id').to(:id=>':id')
         end
@@ -27,8 +27,8 @@ describe "Old specs" do
   end
   
   it "allows wrapping of nested routes all having shared argument" do
-    Merb::Router.prepare do |r|
-      r.match('/:language') do |i18n|
+    Merb::Router.prepare do
+      match('/:language') do |i18n|
         i18n.match('/:controller/:action').to
       end
     end
@@ -36,8 +36,8 @@ describe "Old specs" do
   end
   
   it "allows wrapping of nested routes all having shared argument" do
-    Merb::Router.prepare do |r|
-      r.match(/\/?(.*)?/).to(:language => "[1]") do |l|
+    Merb::Router.prepare do
+      match(/\/?(.*)?/).to(:language => "[1]") do |l|
         l.match("/guides/:action/:id").to(:controller => "tour_guides")
       end
     end

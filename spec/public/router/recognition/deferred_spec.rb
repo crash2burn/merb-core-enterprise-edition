@@ -3,8 +3,8 @@ require File.join(File.dirname(__FILE__), "..", "spec_helper")
 describe "Recognizing requests for deferred routes" do
 
   before :each do
-    Merb::Router.prepare do |r|      
-      r.match("/deferred/:zoo").defer_to do |request, params|
+    Merb::Router.prepare do      
+      match("/deferred/:zoo").defer_to do |request, params|
         params.merge(:controller => "w00t") if params[:zoo]
       end
     end    
@@ -19,8 +19,8 @@ describe "Recognizing requests for deferred routes" do
   end
   
   it "should return the param hash returned by the block" do
-    Merb::Router.prepare do |r|
-      r.match("/deferred").defer_to do |request, params|
+    Merb::Router.prepare do
+      match("/deferred").defer_to do |request, params|
         {:hello => "world"}
       end
     end

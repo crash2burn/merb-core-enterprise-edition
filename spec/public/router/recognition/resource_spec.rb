@@ -3,8 +3,8 @@ require File.join(File.dirname(__FILE__), "..", "spec_helper")
 describe "Recognizing requests for resources routes" do
   
   before :each do
-    Merb::Router.prepare do |r|
-      r.resource :foo
+    Merb::Router.prepare do
+      resource :foo
     end
   end
   

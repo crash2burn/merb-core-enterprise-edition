@@ -5,8 +5,8 @@ describe "When recognizing requests," do
   describe "a basic resource route" do
   
     before :each do
-      Merb::Router.prepare do |r|
-        r.resources :blogposts
+      Merb::Router.prepare do
+        resources :blogposts
       end
     end
   
@@ -82,8 +82,8 @@ describe "When recognizing requests," do
   describe "a customized resource route" do
     
     it "should be able to change the controller that the resource points to" do
-      Merb::Router.prepare do |r|
-        r.resources :blogposts, :controller => :posts
+      Merb::Router.prepare do
+        resources :blogposts, :controller => :posts
       end
       
       route_to('/blogposts').should have_route(:controller => "posts")
@@ -93,8 +93,8 @@ describe "When recognizing requests," do
     
     [:controller_prefix, :namespace].each do |option|
       it "should be able to specify the namespace with #{option.inspect}" do
-        Merb::Router.prepare do |r|
-          r.resources :blogposts, option => "admin"
+        Merb::Router.prepare do
+          resources :blogposts, option => "admin"
         end
         
         route_to('/blogposts').should have_route(:controller => "admin/blogposts")
@@ -102,8 +102,8 @@ describe "When recognizing requests," do
     end
     
     it "should be able to set the path prefix" do
-      Merb::Router.prepare do |r|
-        r.resources :users, :path => "admins"
+      Merb::Router.prepare do
+        resources :users, :path => "admins"
       end
       
       route_to("/admins").should have_route(:controller => "users", :action => "index")
@@ -116,8 +116,8 @@ describe "When recognizing requests," do
     member     = { :five => :get, :six => :post, :seven => :put, :eight => :delete }
     
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.resources :users, :collection => collection, :member => member
+      Merb::Router.prepare do
+        resources :users, :collection => collection, :member => member
       end
     end
     
@@ -167,8 +167,8 @@ describe "When recognizing requests," do
   describe "a resource route with custom keys" do
   
     before :each do
-      Merb::Router.prepare do |r|
-        r.resources :emails, :keys => ["username", "domain"]
+      Merb::Router.prepare do
+        resources :emails, :keys => ["username", "domain"]
       end 
     end
     
