@@ -5,8 +5,8 @@ describe "When generating URLs," do
   describe "a route with a Regexp path" do
     
     it "should not generate" do
-      Merb::Router.prepare do |r|
-        r.match(%r[/hello/world]).to.name(:regexp)
+      Merb::Router.prepare do
+        match(%r[/hello/world]).register.name(:regexp)
       end
       
       lambda { url(:regexp) }.should raise_error(Merb::Router::GenerationError)

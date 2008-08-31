@@ -29,7 +29,7 @@ describe "When recognizing requests," do
     it "should only contain an :action key if no params are defined" do
       # This because all routes have :action => "index" as a default
       Merb::Router.prepare do
-        match('/hello').to
+        match('/hello').register
       end
 
       route_to('/hello').should have_exact_route(:action => "index")
@@ -37,7 +37,7 @@ describe "When recognizing requests," do
 
     it "should be able to extract named segments as params" do
       Merb::Router.prepare do
-        match('/:foo').to
+        match('/:foo').register
       end
 
       route_to('/bar').should have_route(:foo => "bar")
@@ -45,7 +45,7 @@ describe "When recognizing requests," do
 
     it "should be able to extract multiple named segments as params" do
       Merb::Router.prepare do
-        match("/:foo/:faz").to
+        match("/:foo/:faz").register
       end
 
       route_to("/bar/baz").should have_route(:foo => "bar", :faz => "baz")
@@ -53,7 +53,7 @@ describe "When recognizing requests," do
 
     it "should not extract a named segment if it did not match the condition assigned to it" do
       Merb::Router.prepare do
-        match("/:foo", :foo => /^[a-z]$/).to
+        match("/:foo", :foo => /^[a-z]$/).register
       end
 
       route_to("/123").should_not have_route(:foo => "123")
@@ -146,8 +146,8 @@ describe "When recognizing requests," do
     
     it "should accept a Symbol for :controller in a namespace" do
       Merb::Router.prepare do
-        namespace(:admin) do |a|
-          a.to(:controller => :home)
+        namespace(:admin) do
+          to(:controller => :home)
         end
       end
       
@@ -159,8 +159,18 @@ describe "When recognizing requests," do
     
     it "should merge all the params together" do
       Merb::Router.prepare do
-        to(:controller => "foo") do |f|
-          f.match("/hello").to(:action => "bar")
+        to(:controller => "foo") do
+          match("/hello").to(:action => "bar")
+        end
+      end
+      
+      route_to("/hello").should have_route(:controller => "foo", :action => "bar")
+    end
+    
+    it "should yield the new behavior object to the block" do
+      Merb::Router.prepare do
+        to(:controller => "foo") do |builder|
+          builder.match("/hello").to(:action => "bar")
         end
       end
       
@@ -169,8 +179,8 @@ describe "When recognizing requests," do
     
     it "should overwrite previous params with newer params" do
       Merb::Router.prepare do
-        to(:controller => "foo") do |f|
-          f.match("/hello").to(:controller => "bar")
+        to(:controller => "foo") do
+          match("/hello").to(:controller => "bar")
         end
       end
       
@@ -179,8 +189,8 @@ describe "When recognizing requests," do
   
     it "should preserve existing conditions" do
       Merb::Router.prepare do
-        match("/foo").to(:controller => "foo") do |a|
-          a.to(:action => "bar")
+        match("/foo").to(:controller => "foo") do
+          to(:action => "bar")
         end
       end
       
@@ -189,8 +199,8 @@ describe "When recognizing requests," do
     
     it "should be preserved through condition blocks" do
       Merb::Router.prepare do
-        to(:controller => "foo") do |f|
-          f.match('/blah').to
+        to(:controller => "foo") do
+          match('/blah').to
         end
       end
       
@@ -199,8 +209,8 @@ describe "When recognizing requests," do
     
     it "should preserve existing defaults" do
       Merb::Router.prepare do
-        defaults(:action => "bar").to(:controller => "foo") do |a|
-          a.match("/(:action)").to
+        defaults(:action => "bar").to(:controller => "foo") do
+          match("/(:action)").to
         end
       end
       
@@ -209,8 +219,8 @@ describe "When recognizing requests," do
     
     it "should be preserved through defaults blocks" do
       Merb::Router.prepare do
-        to(:controller => "foo") do |f|
-          f.defaults(:action => "bar").match("/blah").to
+        to(:controller => "foo") do
+          defaults(:action => "bar").match("/blah").to
         end
       end
       

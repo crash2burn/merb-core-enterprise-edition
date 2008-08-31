@@ -32,9 +32,40 @@ module Merb
     class GenerationError < StandardError; end;
     class NotCompiledError < StandardError; end;
 
+    # @private
     cattr_accessor :routes, :named_routes
 
     class << self
+      # Yields router scope to the block and inserts resulting routes
+      # between +first+ and +last+ in resulting routing table.
+      #
+      # Compiles routes after block evaluation.
+      def prepare(first = [], last = [], &block)
+        self.routes = []
+        Behavior::Proxy.new.instance_eval(&block)
+        self.routes = first + routes + last
+        compile
+        self
+      end
+      
+      # Appends route in the block to routing table.
+      def append(&block)
+        prepare(routes, [], &block)
+      end
+
+      # Prepends routes in the block to routing table.
+      def prepend(&block)
+        prepare([], routes, &block)
+      end
+      
+      # Clears routes table.
+      def reset!
+        class << self
+          alias_method :match, :match_before_compilation
+        end
+        self.routes, self.named_routes = [], {}
+      end
+      
       # Finds route matching URI of the request and
       # returns a tuple of [route index, route params].
       #
@@ -55,36 +86,6 @@ module Merb
         end
         [route, params]
       end
-      
-      # Clears routes table.
-      def reset!
-        class << self
-          alias_method :match, :match_before_compilation
-        end
-        self.routes, self.named_routes = [], {}
-      end
-
-      # Appends route in the block to routing table.
-      def append(&block)
-        prepare(routes, [], &block)
-      end
-
-      # Prepends routes in the block to routing table.
-      def prepend(&block)
-        prepare([], routes, &block)
-      end
-
-      # Yields router scope to the block and inserts resulting routes
-      # between +first+ and +last+ in resulting routing table.
-      #
-      # Compiles routes after block evaluation.
-      def prepare(first = [], last = [], &block)
-        self.routes = []
-        Behavior::Proxy.new.instance_eval(&block)
-        self.routes = first + routes + last
-        compile
-        self
-      end
 
       # Looks up route by name and generates URL using
       # given parameters. Raises GenerationError if
@@ -100,6 +101,14 @@ module Merb
         route.generate(params) or raise GenerationError, "Named route #{name} could not be generated with #{params.inspect}"
       end
 
+      def match_before_compilation(request)
+        raise NotCompiledError, "The routes have not been compiled yet"
+      end
+
+      alias_method :match, :match_before_compilation
+
+    private
+    
       # Defines method with a switch statement that does routes recognition.
       def compile
         if routes.any?
@@ -108,14 +117,6 @@ module Merb
           reset!
         end
       end
-
-      def match_before_compilation(request)
-        raise NotCompiledError, "The routes have not been compiled yet"
-      end
-
-      alias_method :match, :match_before_compilation
-
-    private
 
       # Generates method that does route recognition with a switch statement.
       def compiled_statement

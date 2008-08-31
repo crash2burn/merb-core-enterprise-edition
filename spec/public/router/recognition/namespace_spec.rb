@@ -6,19 +6,30 @@ describe "When recognizing requests," do
     
     it "should add to the path and prepend the controller with the namespace" do
       Merb::Router.prepare do
-        namespace :admin do |admin|
-          admin.match("/foo").to(:controller => "foos")
+        namespace :admin do
+          match("/foo").to(:controller => "foos")
         end
       end
+      
       route_to("/foo").should       have_nil_route
+      route_to("/admin/foo").should have_route(:controller => "admin/foos")
+    end
+    
+    it "should yield the new behavior object to the block" do
+      Merb::Router.prepare do
+        namespace :admin do |a|
+          a.match("/foo").to(:controller => "foos")
+        end
+      end
+      
       route_to("/admin/foo").should have_route(:controller => "admin/foos")
     end
     
     it "should be able to prepend the namespace even if the :controller param has been specified already" do
       Merb::Router.prepare do
-        to(:controller => "bars") do |bars|
-          bars.namespace(:admin) do |admin|
-            admin.match("/foo").to
+        to(:controller => "bars") do
+          namespace(:admin) do
+            match("/foo").register
           end
         end
       end
@@ -28,10 +39,8 @@ describe "When recognizing requests," do
     
     it "should be able to prepend the namespace even if :controller has been used in the path already" do
       Merb::Router.prepare do
-        match("/:controller") do |c|
-          c.namespace(:marketing) do |marketing|
-            marketing.to
-          end
+        match("/:controller") do
+          namespace(:marketing).register
         end
       end
       
@@ -40,8 +49,8 @@ describe "When recognizing requests," do
     
     it "should be able to specify the path prefix" do
       Merb::Router.prepare do
-        namespace :admin, :path => "administration" do |admin|
-          admin.match("/foo").to(:controller => "foos")
+        namespace :admin, :path => "administration" do
+          match("/foo").to(:controller => "foos")
         end
       end
       
@@ -51,8 +60,8 @@ describe "When recognizing requests," do
     
     it "should be able to escape the controller namespace" do
       Merb::Router.prepare do
-        namespace :admin do |a|
-          a.match("/login").to(:controller => "/sessions")
+        namespace :admin do
+          match("/login").to(:controller => "/sessions")
         end
       end
       
@@ -61,33 +70,44 @@ describe "When recognizing requests," do
     
     it "should be able to set a namespace without a path prefix" do
       Merb::Router.prepare do
-        namespace :admin, :path => "" do |admin|
-          admin.match("/foo").to(:controller => "foos")
+        namespace :admin, :path => "" do
+          match("/foo").to(:controller => "foos")
         end
       end
       
       route_to("/admin/foo").should have_nil_route
-      route_to("/foo").should have_route(:controller => "admin/foos")
+      route_to("/foo").should       have_route(:controller => "admin/foos")
+    end
+    
+    it "should be able to use nil to set a namespace without a path prefix" do
+      Merb::Router.prepare do
+        namespace :admin, :path => nil do
+          match("/foo").to(:controller => "foos")
+        end
+      end
+      
+      route_to("/admin/foo").should have_nil_route
+      route_to("/foo").should       have_route(:controller => "admin/foos")
     end
     
     it "should preserve previous conditions" do
       Merb::Router.prepare do
-        match :domain => "foo.com" do |foo|
-          foo.namespace :admin do |admin|
-            admin.match("/foo").to(:controller => "foos")
+        match :domain => "foo.com" do
+          namespace :admin do
+            match("/foo").to(:controller => "foos")
           end
         end
       end
       
-      route_to("/admin/foo").should have_nil_route
+      route_to("/admin/foo").should                       have_nil_route
       route_to("/admin/foo", :domain => "foo.com").should have_route(:controller => "admin/foos")
     end
     
     it "should preserve previous params" do
       Merb::Router.prepare do
-        to(:awesome => "true") do |awesome|
-          awesome.namespace :administration do |a|
-            a.match("/something").to(:controller => "home")
+        to(:awesome => "true") do
+          namespace :administration do
+            match("/something").to(:controller => "home")
           end
         end
       end
@@ -97,9 +117,9 @@ describe "When recognizing requests," do
     
     it "should preserve previous defaults" do
       Merb::Router.prepare do
-        defaults(:action => "awesome", :foo => "bar") do |foo|
-          foo.namespace :baz do |baz|
-            baz.match("/users").to(:controller => "users")
+        defaults(:action => "awesome", :foo => "bar") do
+          namespace :baz do
+            match("/users").to(:controller => "users")
           end
         end
       end
@@ -109,8 +129,8 @@ describe "When recognizing requests," do
     
     it "should be preserved through match blocks" do
       Merb::Router.prepare do
-        namespace(:admin) do |a|
-          a.match(:domain => "admin.domain.com").to(:controller => "welcome")
+        namespace(:admin) do
+          match(:domain => "admin.domain.com").to(:controller => "welcome")
         end
       end
       
@@ -119,9 +139,9 @@ describe "When recognizing requests," do
     
     it "should be preserved through to blocks" do
       Merb::Router.prepare do
-        namespace(:blah) do |blah|
-          blah.to(:action => "overload") do |o|
-            o.match("/blah").to(:controller => "weeeee")
+        namespace(:blah) do
+          to(:action => "overload") do
+            match("/blah").to(:controller => "weeeee")
           end
         end
       end
@@ -131,9 +151,9 @@ describe "When recognizing requests," do
     
     it "should be preserved through defaults blocks" do
       Merb::Router.prepare do
-        namespace(:blah) do |blah|
-          blah.defaults(:action => "overload") do |o|
-            o.match("/blah").to(:controller => "weeeee")
+        namespace(:blah) do
+          defaults(:action => "overload") do
+            match("/blah").to(:controller => "weeeee")
           end
         end
       end
@@ -145,9 +165,9 @@ describe "When recognizing requests," do
   describe "a nested namespaced route" do
     it "should append the paths and controller namespaces together" do
       Merb::Router.prepare do
-        namespace(:foo) do |foo|
-          foo.namespace(:bar) do |bar|
-            bar.match("/blah").to(:controller => "weeeee")
+        namespace(:foo) do
+          namespace(:bar) do
+            match("/blah").to(:controller => "weeeee")
           end
         end
       end
@@ -157,9 +177,9 @@ describe "When recognizing requests," do
     
     it "should respec the custom path prefixes set on each namespace" do
       Merb::Router.prepare do
-        namespace(:foo, :path => "superfoo") do |foo|
-          foo.namespace(:bar, :path => "superbar") do |bar|
-            bar.match("/blah").to(:controller => "weeeee")
+        namespace(:foo, :path => "superfoo") do
+          namespace(:bar, :path => "superbar") do
+            match("/blah").to(:controller => "weeeee")
           end
         end
       end
@@ -169,10 +189,10 @@ describe "When recognizing requests," do
     
     it "should preserve previous conditions" do
       Merb::Router.prepare do
-        namespace(:foo) do |foo|
-          foo.match(:protocol => 'https://') do |secure|
-            secure.namespace(:bar) do |bar|
-              bar.match("/blah").to(:controller => "weeeee")
+        namespace(:foo) do
+          match(:protocol => 'https://') do
+            namespace(:bar) do
+              match("/blah").to(:controller => "weeeee")
             end
           end
         end
@@ -183,10 +203,10 @@ describe "When recognizing requests," do
     
     it "should preserve previous params" do
       Merb::Router.prepare do
-        namespace(:foo) do |foo|
-          foo.match('/:first') do |first|
-            first.namespace(:bar) do |bar|
-              bar.match("/blah").to(:controller => "weeeee")
+        namespace(:foo) do
+          match('/:first') do
+            namespace(:bar) do
+              match("/blah").to(:controller => "weeeee")
             end
           end
         end
@@ -197,10 +217,10 @@ describe "When recognizing requests," do
     
     it "should preserve previous defaults" do
       Merb::Router.prepare do
-        namespace(:foo) do |foo|
-          foo.defaults(:action => "megaweee") do |f|
-            f.namespace(:bar) do |bar|
-              bar.match("/blah").to(:controller => "weeeee")
+        namespace(:foo) do
+          defaults(:action => "megaweee") do
+            namespace(:bar) do
+              match("/blah").to(:controller => "weeeee")
             end
           end
         end
@@ -211,10 +231,10 @@ describe "When recognizing requests," do
       
     it "should be preserved through match blocks" do
       Merb::Router.prepare do
-        namespace(:foo) do |foo|
-          foo.match('/bar') do |bar|
-            bar.namespace(:baz) do |baz|
-              baz.match("/blah").to(:controller => "weeeee")
+        namespace(:foo) do
+          match('/bar') do
+            namespace(:baz) do
+              match("/blah").to(:controller => "weeeee")
             end
           end
         end
@@ -225,10 +245,10 @@ describe "When recognizing requests," do
     
     it "should be preserved through to blocks" do
       Merb::Router.prepare do
-        namespace(:foo) do |foo|
-          foo.match('/bar').to(:controller => 'bar') do |bar|
-            bar.namespace(:baz) do |baz|
-              baz.match("/blah").to(:action => "weeeee")
+        namespace(:foo) do
+          match('/bar').to(:controller => 'bar') do
+            namespace(:baz) do
+              match("/blah").to(:action => "weeeee")
             end
           end
         end
@@ -239,10 +259,10 @@ describe "When recognizing requests," do
     
     it "should be preserved through defaults blocks" do
       Merb::Router.prepare do
-        namespace(:foo) do |foo|
-          foo.defaults(:action => "default_action") do |f|
-            f.namespace(:baz) do |baz|
-              baz.match("/blah").to(:controller => "blah")
+        namespace(:foo) do
+          defaults(:action => "default_action") do
+            namespace(:baz) do
+              match("/blah").to(:controller => "blah")
             end
           end
         end
@@ -253,9 +273,9 @@ describe "When recognizing requests," do
     
     it "should use the controller prefix from the last time the prefix started with /" do
       Merb::Router.prepare do
-        namespace(:foo) do |f|
-          f.namespace(:bar, :controller_prefix => "/bar") do |b|
-            b.match("/home").to(:controller => "home")
+        namespace(:foo) do
+          namespace(:bar, :controller_prefix => "/bar") do
+            match("/home").to(:controller => "home")
           end
         end
       end
@@ -269,40 +289,43 @@ describe "When recognizing requests," do
     
     it "should match a get to /admin/foo/blogposts to the blogposts controller and index action" do
       Merb::Router.prepare do
-        namespace :admin do |admin|
-          admin.resource :foo do |foo|
-            foo.resources :blogposts
+        namespace :admin do
+          resource :foo do
+            resources :blogposts
           end
         end
       end
+      
       route_to('/admin/foo/blogposts', :method => :get).should have_route(:controller => 'admin/blogposts', :action => 'index', :id => nil)
     end
 
     it "should match a get to /admin/blogposts/1/foo to the foo controller and the show action" do
       Merb::Router.prepare do
-        namespace :admin do |admin|
-          admin.resources :blogposts do |blogposts|
-            blogposts.resource :foo
+        namespace :admin do
+          resources :blogposts do
+            resource :foo
           end
         end
       end
+      
       route_to('/admin/blogposts/1/foo', :method => :get).should have_route(:controller => 'admin/foo', :action => 'show', :blogpost_id => '1', :id => nil)
     end
   
     it "should match a get to /my_admin/blogposts to the blogposts controller with a custom patch setting" do
       Merb::Router.prepare do
-        namespace(:admin, :path => "my_admin") do |admin|
-          admin.resources :blogposts
+        namespace(:admin, :path => "my_admin") do
+          resources :blogposts
         end
       end
+      
       route_to('/my_admin/blogposts', :method => :get).should have_route(:controller => 'admin/blogposts', :action => 'index', :id => nil)
     end
 
     it "should match a get to /admin/blogposts/1/foo to the foo controller and the show action with namespace admin" do
       Merb::Router.prepare do
-        namespace(:admin, :path => "") do |admin|
-          admin.resources :blogposts do |blogposts|
-            blogposts.resource :foo
+        namespace(:admin, :path => "") do
+          resources :blogposts do
+            resource :foo
           end
         end
       end

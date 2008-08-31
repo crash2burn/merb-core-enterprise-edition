@@ -5,8 +5,8 @@ describe "When generating URLs," do
   describe "a plain named route with no variables" do
     
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.match("/hello/world").to(:controller => "hello", :action => "world").name(:simple)
+      Merb::Router.prepare do
+        match("/hello/world").to(:controller => "hello", :action => "world").name(:simple)
       end
     end
 
@@ -23,8 +23,8 @@ describe "When generating URLs," do
   describe "a named route with a variable and no conditions" do
     
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.match("/:account/welcome").to(:controller => "home", :action => "welcome").name(:welcome)
+      Merb::Router.prepare do
+        match("/:account/welcome").to(:controller => "home", :action => "welcome").name(:welcome)
       end
     end
 
@@ -57,8 +57,8 @@ describe "When generating URLs," do
   describe "a named route with multiple variables and no conditions" do
     
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.match("/:foo/:bar").to(:controller => "one", :action => "two").name(:foobar)
+      Merb::Router.prepare do
+        match("/:foo/:bar").to(:controller => "one", :action => "two").name(:foobar)
       end
     end
 
@@ -91,8 +91,8 @@ describe "When generating URLs," do
   describe "a named route that has :controller and :action in the path and no conditions" do
     
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.match("/:controller/:action").to.name(:default)
+      Merb::Router.prepare do
+        match("/:controller/:action").register.name(:default)
       end
     end
 

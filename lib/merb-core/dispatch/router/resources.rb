@@ -179,7 +179,7 @@ module Merb
             resource.match("/edit(.:format)",   :method => :get   ).to(:action => "edit"   ).name(:edit, name)
             resource.match("/delete(.:format)", :method => :get   ).to(:action => "delete" ).name(:delete, name)
 
-            yield resource.options(:name_prefix => name) if block_given?
+            resource.options(:name_prefix => name, &block) if block_given?
           end
         end
 

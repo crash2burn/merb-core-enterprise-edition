@@ -4,19 +4,23 @@ describe "Recognizing requests for nested resources routes" do
   
   before(:each) do
     Merb::Router.prepare do
-      resources :blogposts do |b|
-        b.resources :comments do |c|
-          c.resources :versions
+      
+      resources :blogposts do
+        resources :comments do
+          resources :versions
         end
       end
-      resources :users do |u|
-        u.resources :comments
+      
+      resources :users do
+        resources :comments
       end
-      resource :foo do |f|
-        f.resources :comments
+      
+      resource :foo do
+        resources :comments
       end
-      resources :domains, :keys => [:domain] do |d|
-        d.resources :emails, :keys => [:username]
+      
+      resources :domains, :keys => [:domain] do
+        resources :emails, :keys => [:username]
       end
     end
   end

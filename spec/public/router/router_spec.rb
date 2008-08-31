@@ -4,57 +4,70 @@ describe Merb::Router do
   
   describe "#prepare" do
     
-    before(:each) do
-      @builder_methods = [
-        :match, :to, :defaults, :options,
-        :fixatable, :name, :full_name, :defer_to, :default_routes,
-        :namespace, :redirect, :resources, :resource
-      ]
-    end
-    
     it "should be able to compile an empty route table" do
       lambda do
         Merb::Router.prepare { }
       end.should_not raise_error(SyntaxError)
     end
     
-    it "should yield an instance of the builder object" do
-      builder_methods = @builder_methods
-      Merb::Router.prepare do |r|
-        builder_methods.each do |method|
-          r.respond_to?(method).should == true
+    it "should evaluate the prepare block in context an object that provides builder methods" do
+      Merb::Router.prepare do
+        %w(
+          match to defaults options fixatable
+          name full_name defer_to default_routes
+          namespace redirect resources resource
+        ).each do |method|
+          respond_to?(method).should == true
         end
       end
     end
     
-    it "should evaluate the prepare block in context of an object that can proxy method calls to the current builder object" do
-      builder_methods = @builder_methods
-      Merb::Router.prepare do
-        builder_methods.each do |method|
-          self.respond_to?(method).should == true
-        end
-      end
-    end
+    # These aren't needed anymore since this is the new DSL
+    # ---
+    # it "should be able to keep track of the current builder context when calling to" do
+    #   Merb::Router.prepare do
+    #     match("/hello") do
+    #       match("/world").to(:controller => "hellos")
+    #     end
+    #   end
+    #   
+    #   route_to("/hello/world").should have_route(:controller => "hellos")
+    # end
+    # 
+    # it "should be able to keep track of the current builder context when calling to" do
+    #   Merb::Router.prepare do
+    #     match("/hello") do
+    #       to(:controller => "hellos")
+    #     end
+    #   end
+    #   
+    #   route_to("/hello").should have_route(:controller => "hellos")
+    # end
     
-    it "should be able to keep track of the current builder context when calling to" do
-      Merb::Router.prepare do
-        match("/hello") do
-          match("/world").to(:controller => "hellos")
-        end
-      end
-      
-      route_to("/hello/world").should have_route(:controller => "hellos")
-    end
+  end
+
+  describe "#append" do
     
-    it "should be able to keep track of the current builder context when calling to" do
-      Merb::Router.prepare do
-        match("/hello") do
-          to(:controller => "hellos")
-        end
-      end
-      
-      route_to("/hello").should have_route(:controller => "hellos")
-    end
+    it "should be awesome"
+    
+  end
+  
+  describe "#prepend" do
+    
+    it "should be awesome"
+    
+  end
+  
+  describe "#reset!" do
+    
+    it "should be awesome"
+    
+  end
+  
+  describe "#route_for" do
+    
+    it "should be awesome"
+    
   end
 
   describe "#match" do

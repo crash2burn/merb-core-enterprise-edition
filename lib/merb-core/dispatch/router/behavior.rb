@@ -29,7 +29,7 @@ module Merb
         instance_methods.each { |m| undef_method m unless %w[ __id__ __send__ class kind_of? respond_to? assert_kind_of should should_not instance_variable_set instance_variable_get instance_eval].include?(m) }
         
         def initialize
-          @behaviors = [Behavior.new(self).defaults(:action => "index")]
+          @behaviors = [Behavior.new(self).defaults(:action => "index").options(:identifier => :id)]
         end
         
         def push(behavior)
@@ -38,11 +38,6 @@ module Merb
         
         def pop
           @behaviors.pop
-        end
-        
-        def last
-          raise 'damn'
-          @behaviors.last
         end
         
         def respond_to?(*args)
@@ -266,7 +261,7 @@ module Merb
       # @public
       def namespace(name_or_path, opts = {}, &block)
         name = name_or_path.to_s # We don't want this modified ever
-        path = opts[:path] || name
+        path = opts.has_key?(:path) ? opts[:path] : name
 
         raise Error, "The route has already been committed. Further options cannot be specified" if @route
 
@@ -275,7 +270,7 @@ module Merb
         opts[:name_prefix]       = name unless opts.has_key?(:name_prefix)
 
         behavior = self
-        behavior = behavior.match("/#{path}") unless path.empty?
+        behavior = behavior.match("/#{path}") unless path.nil? || path.empty?
         behavior.options(opts, &block)
       end
       

@@ -4,7 +4,7 @@ describe "Recognizing requests for the routes with default values for variables"
   
   it "should use the specified default value if the variable is not included in the path" do
     Merb::Router.prepare do
-      defaults(:controller => "foos", :action => "bars").match("/").to
+      defaults(:controller => "foos", :action => "bars").match("/").register
     end
     
     route_to("/").should have_route(:controller => "foos", :action => "bars")
@@ -12,7 +12,7 @@ describe "Recognizing requests for the routes with default values for variables"
   
   it "should use the specified default value if the variable is included in the path but wasn't matched" do
     Merb::Router.prepare do
-      defaults(:action => "index").match("/:controller(/:action)").to
+      defaults(:action => "index").match("/:controller(/:action)").register
     end
     
     route_to("/foos").should have_route(:controller => "foos", :action => "index")
@@ -20,7 +20,7 @@ describe "Recognizing requests for the routes with default values for variables"
   
   it "should use the matched value for required variables" do
     Merb::Router.prepare do
-      defaults(:action => "index").match("/:controller/:action").to
+      defaults(:action => "index").match("/:controller/:action").register
     end
     
     route_to("/foos/bar").should have_route(:controller => "foos", :action => "bar")
@@ -28,7 +28,7 @@ describe "Recognizing requests for the routes with default values for variables"
   
   it "should use the matched value for optional variables" do
     Merb::Router.prepare do
-      defaults(:action => "index").match("/:controller(/:action)").to
+      defaults(:action => "index").match("/:controller(/:action)").register
     end
     
     route_to("/foos/bar").should have_route(:controller => "foos", :action => "bar")
@@ -52,8 +52,18 @@ describe "Recognizing requests for the routes with default values for variables"
   
   it "should combine multiple default params when nesting defaults" do
     Merb::Router.prepare do
+      defaults(:controller => "home") do
+        defaults(:action => "index").match("/(:controller/:action)").register
+      end
+    end
+    
+    route_to("/").should have_route(:controller => "home", :action => "index")
+  end
+  
+  it "should yield the new builder object to the block" do
+    Merb::Router.prepare do
       defaults(:controller => "home") do |d|
-        d.defaults(:action => "index").match("/(:controller/:action)").to
+        d.defaults(:action => "index").match("/(:controller/:action)").register
       end
     end
     
@@ -62,8 +72,8 @@ describe "Recognizing requests for the routes with default values for variables"
   
   it "should overwrite previously set default params with the new ones when nesting" do
     Merb::Router.prepare do
-      defaults(:action => "index") do |d|
-        d.defaults(:action => "notindex").match("/:account(/:action)").to
+      defaults(:action => "index") do
+        defaults(:action => "notindex").match("/:account(/:action)").register
       end
     end
     
@@ -72,8 +82,8 @@ describe "Recognizing requests for the routes with default values for variables"
   
   it "should preserve previously set conditions" do
     Merb::Router.prepare do
-      match("/blah") do |b|
-        b.defaults(:foo => "bar").to(:controller => "baz")
+      match("/blah") do
+        defaults(:foo => "bar").to(:controller => "baz")
       end
     end
     
@@ -82,8 +92,8 @@ describe "Recognizing requests for the routes with default values for variables"
   
   it "should be preserved through condition blocks" do
     Merb::Router.prepare do
-      defaults(:foo => "bar") do |f|
-        f.match("/go").to
+      defaults(:foo => "bar") do
+        match("/go").register
       end
     end
     
@@ -92,8 +102,8 @@ describe "Recognizing requests for the routes with default values for variables"
   
   it "should preserve previously set params" do
     Merb::Router.prepare do
-      to(:controller => "bar") do |b|
-        b.defaults(:action => "baz").match("/go").to
+      to(:controller => "bar") do
+        defaults(:action => "baz").match("/go").register
       end
     end
     
@@ -102,8 +112,8 @@ describe "Recognizing requests for the routes with default values for variables"
   
   it "should be preserved through params blocks" do
     Merb::Router.prepare do
-      defaults(:foo => "bar") do |f|
-        f.match("/go").to(:controller => "gos")
+      defaults(:foo => "bar") do
+        match("/go").to(:controller => "gos")
       end
     end
     

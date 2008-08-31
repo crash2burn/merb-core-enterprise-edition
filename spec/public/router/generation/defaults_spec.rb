@@ -5,13 +5,13 @@ describe "When generating URLs," do
   describe "a route default values for variable segments" do
     
     before(:each) do
-      Merb::Router.prepare do |r|
-        r.match("/(:foobar)").defaults(:foobar => "foo").to.name(:with_default)
+      Merb::Router.prepare do
+        match("/(:foobar)").defaults(:foobar => "foo").register.name(:with_default)
       end
     end
     
     it "should generate the route normally" do
-      url(:with_default).should == "/"
+      url(:with_default).should                     == "/"
       url(:with_default, :foobar => "hello").should == "/hello"
     end
     

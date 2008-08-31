@@ -9,7 +9,7 @@ describe "When recognizing requests," do
         match(%r{^/foos?/(bar|baz)/([a-z0-9]+)}).to(:controller => "foo", :action => "[1]", :id => "[2]")
       end
       
-      route_to("/foo/bar/baz").should have_route(:controller => "foo", :action => "bar", :id => "baz")
+      route_to("/foo/bar/baz").should  have_route(:controller => "foo", :action => "bar", :id => "baz")
       route_to("/foos/bar/baz").should have_route(:controller => "foo", :action => "bar", :id => "baz")
       route_to("/bars/foo/baz").should have_nil_route
     end
@@ -26,12 +26,12 @@ describe "When recognizing requests," do
     
     it "should allow mixing regular expression paths with string paths when nesting match blocks" do
       Merb::Router.prepare do
-        match("/buh/") do |buh|
-          buh.match(%r{^(foo|bar)/baz/([a-z0-9]+)}).to(:controller => "[1]", :action => "baz", :id => "[2]")
+        match("/buh/") do
+          match(%r{^(foo|bar)/baz/([a-z0-9]+)}).to(:controller => "[1]", :action => "baz", :id => "[2]")
         end
       end
       
-      route_to("/buh/foo/baz/1").should have_route(:controller => "foo", :action => "baz", :id => "1")
+      route_to("/buh/foo/baz/1").should   have_route(:controller => "foo", :action => "baz", :id => "1")
       route_to("/buh/bar/baz/buh").should have_route(:controller => "bar", :action => "baz", :id => "buh")
       route_to("/buh/baz/foo/buh").should have_nil_route
     end
@@ -63,8 +63,8 @@ describe "Old Regexp path specs" do
 
   it "should allow wrapping of nested routes all having shared OPTIONAL argument" do
     Merb::Router.prepare do
-      match(/\/?(.*)?/).to(:language => "[1]") do |l|
-        l.match("/guides/:action/:id").to(:controller => "tour_guides")
+      match(/\/?(.*)?/).to(:language => "[1]") do
+        match("/guides/:action/:id").to(:controller => "tour_guides")
       end
     end
 
