@@ -28,6 +28,7 @@ module Merb
           @conditional_block = conditional_block
         end
 
+        @identifier        = options[:identifier]
         @segments          = []
         @symbol_conditions = {}
         @placeholders      = {}
@@ -69,25 +70,6 @@ module Merb
       # === Compiled method ===
       def generate(params = {})
         raise GenerationError, "Cannot generate regexp Routes" if regexp?
-        
-        # --- A little dancing to get the old merb specs to pass ---
-        
-        # Any required parameter that looks like an association ID and
-        # is missing should be fetched from the resource.
-        variables.each do |v|
-          if v.to_s =~ /_id$/ && params[:id].respond_to?(v)
-            params[v] ||= params[:id].send(v)
-          end
-        end
-        
-        # If any param responds to to_param, then that return value should
-        # be used instead.
-        params.each do |key, value|
-          params[key] = value.to_param if value.respond_to?(:to_param)
-        end
-        
-        # --- Our little dance is finished ---
-        
         @generator[params]
       end
 
@@ -177,7 +159,7 @@ module Merb
         segments.each_with_index do |segment, i|
           bits << case
             when segment.is_a?(String) then segment
-            when segment.is_a?(Symbol) then '#{cached_' + segment.to_s + '}'
+            when segment.is_a?(Symbol) then '#{param_for_route(cached_' + segment.to_s + ')}'
             when segment.is_a?(Array) && segment.any? { |s| !s.is_a?(String) } then '#{' + "_optional_segments_#{segment.object_id}" +'}'
             else ""
           end
@@ -401,7 +383,20 @@ module Merb
         "{#{elements.join(', ')}}"
       end
 
-    # ---------- Utilities ---------- 
+    # ---------- Utilities ----------
+    
+      def param_for_route(param)
+        if @identifier
+          case param
+            when String, Symbol, Numeric, TrueClass, FalseClass, NilClass
+              param
+            else
+              param.send(@identifier)
+          end
+        else
+          param
+        end
+      end
     
       def segment_level_to_s(segments)
         (segments || []).inject('') do |str, seg|

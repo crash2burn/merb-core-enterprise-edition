@@ -12,6 +12,9 @@ describe "When generating URLs," do
     before(:each) do
       Merb::Router.prepare do
         resources :users
+        options(:identifier => :ohhai) do
+          resources :admins
+        end
       end
     end
     
@@ -36,13 +39,7 @@ describe "When generating URLs," do
     end
     
     it "should be able to provide an object that responds to a custom identifier method" do
-      Merb::Router.prepare do
-        options(:identifier => :ohhai) do
-          resources :users
-        end
-      end
-      
-      url(:users, :id => User.new).should == "/users/10"
+      url(:admin, :id => User.new).should == "/admins/10"
     end
     
     it "should provide an edit route" do
@@ -58,13 +55,7 @@ describe "When generating URLs," do
     end
     
     it "should be able to provide an object that responds to a custom identifier method" do
-      Merb::Router.prepare do
-        options(:identifier => :ohhai) do
-          resources :users
-        end
-      end
-      
-      url(:edit_user, :id => User.new).should == "/users/10/edit"
+      url(:edit_admin, :id => User.new).should == "/admins/10/edit"
     end
     
     it "should provide a delete route" do
@@ -80,13 +71,7 @@ describe "When generating URLs," do
     end
     
     it "should be able to provide an object that responds to a custom identifier method" do
-      Merb::Router.prepare do
-        options(:identifier => :ohhai) do
-          resources :users
-        end
-      end
-      
-      url(:delete_user, :id => User.new).should == "/users/10/delete"
+      url(:delete_admin, :id => User.new).should == "/admins/10/delete"
     end
     
     it "should be able to specify different keys than :id" do

@@ -21,9 +21,10 @@ module Merb
   #
   # Compilation is synchronized by mutex.
   class Router
-    @@routes         = []
-    @@named_routes   = {}
-    @@compiler_mutex = Mutex.new
+    @routes         = []
+    @named_routes   = {}
+    @compiler_mutex = Mutex.new
+    @root_behavior  = Behavior.new.defaults(:action => "index").identify(:id)
 
     # Raised when route lookup fails.
     class RouteNotFound < StandardError; end;
@@ -32,18 +33,18 @@ module Merb
     class GenerationError < StandardError; end;
     class NotCompiledError < StandardError; end;
 
-    # @private
-    cattr_accessor :routes, :named_routes
-
     class << self
+      # @private
+      attr_accessor :routes, :named_routes, :root_behavior
+      
       # Yields router scope to the block and inserts resulting routes
       # between +first+ and +last+ in resulting routing table.
       #
       # Compiles routes after block evaluation.
       def prepare(first = [], last = [], &block)
-        self.routes = []
-        Behavior::Proxy.new.instance_eval(&block)
-        self.routes = first + routes + last
+        @routes = []
+        root_behavior.with_proxy(&block)
+        @routes = first + @routes + last
         compile
         self
       end
@@ -91,7 +92,7 @@ module Merb
       # given parameters. Raises GenerationError if
       # passed parameters do not match those of route.
       def generate(name, *args)
-        unless route = @@named_routes[name.to_sym]
+        unless route = @named_routes[name.to_sym]
           raise GenerationError, "Named route not found: #{name}"
         end
         
@@ -120,7 +121,7 @@ module Merb
 
       # Generates method that does route recognition with a switch statement.
       def compiled_statement
-        @@compiler_mutex.synchronize do
+        @compiler_mutex.synchronize do
           condition_keys, if_statements = Set.new, ""
 
           routes.each_with_index do |route, i|
@@ -129,15 +130,15 @@ module Merb
             if_statements << route.compiled_statement(i == 0)
           end
 
-          @@statement =  "def match(request)\n"
-          @@statement << condition_keys.inject("") do |cached, key|
+          statement =  "def match(request)\n"
+          statement << condition_keys.inject("") do |cached, key|
             cached << "  cached_#{key} = request.#{key}.to_s\n"
           end
-          @@statement <<    if_statements
-          @@statement << "  else\n"
-          @@statement << "    [nil, {}]\n"
-          @@statement << "  end\n"
-          @@statement << "end"
+          statement <<    if_statements
+          statement << "  else\n"
+          statement << "    [nil, {}]\n"
+          statement << "  end\n"
+          statement << "end"
         end
       end
 

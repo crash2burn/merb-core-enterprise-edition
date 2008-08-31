@@ -29,7 +29,7 @@ module Merb
         instance_methods.each { |m| undef_method m unless %w[ __id__ __send__ class kind_of? respond_to? assert_kind_of should should_not instance_variable_set instance_variable_get instance_eval].include?(m) }
         
         def initialize
-          @behaviors = [Behavior.new(self).defaults(:action => "index").options(:identifier => :id)]
+          @behaviors = []
         end
         
         def push(behavior)
@@ -81,12 +81,13 @@ module Merb
       # Behavior:: The initialized Behavior object
       #---
       # @private
-      def initialize(proxy = nil, conditions = {}, params = {}, defaults = {}, options = {})
-        @proxy      = proxy
-        @conditions = conditions
-        @params     = params
-        @defaults   = defaults
-        @options    = options
+      def initialize(proxy = nil, conditions = {}, params = {}, defaults = {}, identifiers = {}, options = {})
+        @proxy       = proxy
+        @conditions  = conditions
+        @params      = params
+        @defaults    = defaults
+        @identifiers = identifiers
+        @options     = options
 
         stringify_condition_values
       end
@@ -162,7 +163,7 @@ module Merb
 
         raise Error, "The route has already been committed. Further conditions cannot be specified" if @route
 
-        behavior = Behavior.new(@proxy, @conditions.merge(conditions), @params, @defaults, @options)
+        behavior = Behavior.new(@proxy, @conditions.merge(conditions), @params, @defaults, @identifiers, @options)
         with_behavior_context(behavior, &block)
       end
       
@@ -193,7 +194,7 @@ module Merb
       def to(params = {}, &block)
         raise Error, "The route has already been committed. Further params cannot be specified" if @route
 
-        behavior = Behavior.new(@proxy, @conditions, @params.merge(params), @defaults, @options)
+        behavior = Behavior.new(@proxy, @conditions, @params.merge(params), @defaults, @identifiers, @options)
         
         if block_given?
           with_behavior_context(behavior, &block)
@@ -217,11 +218,15 @@ module Merb
       # ---
       # @public
       def defaults(defaults = {}, &block)
-        behavior = Behavior.new(@proxy, @conditions, @params, @defaults.merge(defaults), @options)
+        behavior = Behavior.new(@proxy, @conditions, @params, @defaults.merge(defaults), @identifiers, @options)
         with_behavior_context(behavior, &block)
       end
       
-      # Sets various miscellaneous route options
+      # Sets various miscellaneous route options. The currently supported
+      # options are as follow:
+      # * :controller_prefix
+      # * :name_prefix
+      # * :identifier
       # ---
       # @public
       def options(opts = {}, &block)
@@ -231,7 +236,7 @@ module Merb
           options[key] = (options[key] || []) + [value.freeze] if value
         end
 
-        behavior = Behavior.new(@proxy, @conditions, @params, @defaults, options)
+        behavior = Behavior.new(@proxy, @conditions, @params, @defaults, @identifiers, options)
         with_behavior_context(behavior, &block)
       end
       
@@ -257,7 +262,7 @@ module Merb
       #   r.namespace(:admin, :path=>"super_admin") do |admin|
       #     admin.resources :accounts
       #   end
-      #---
+      # ---
       # @public
       def namespace(name_or_path, opts = {}, &block)
         name = name_or_path.to_s # We don't want this modified ever
@@ -272,6 +277,20 @@ module Merb
         behavior = self
         behavior = behavior.match("/#{path}") unless path.nil? || path.empty?
         behavior.options(opts, &block)
+      end
+      
+      # Configures how params are converted for routes
+      # ---
+      # @public
+      def identify(identifiers = {}, &block)
+        identifiers = if Hash === identifiers
+          @identifiers.merge(identifiers)
+        else
+          { Object => identifiers }
+        end
+        
+        behavior = Behavior.new(@proxy, @conditions, @params, @defaults, identifiers.freeze, @options)
+        with_behavior_context(behavior, &block)
       end
       
       # Creates the most common routes /:controller/:action/:id.format when
@@ -369,6 +388,16 @@ module Merb
         self
       end
       
+      # So that Router can have a default route
+      # ---
+      # @private
+      def with_proxy(&block) #:nodoc:
+        proxy = Proxy.new
+        proxy.push Behavior.new(proxy, @conditions, @params, @defaults, @identifiers, @options)
+        proxy.instance_eval(&block)
+        proxy
+      end
+      
     protected
       
       def to_route(params = {}, &conditional_block)
@@ -389,7 +418,12 @@ module Merb
         
         params.merge!(:controller => controller.to_s.gsub(%r{^/}, '')) if controller
         
-        @route = Route.new(@conditions.dup, params, :defaults => @defaults.dup, &conditional_block)
+        # Sorts the identifiers so that modules that are at the bottom of the
+        # inheritance chain come first (more specific modules first). Object
+        # should always be last.
+        identifiers = @identifiers.sort { |(first,_),(sec,_)| first <=> sec || 1 }
+        
+        @route = Route.new(@conditions.dup, params, :defaults => @defaults.dup, :identifiers => identifiers, &conditional_block)
         @route.register
         self
       end
