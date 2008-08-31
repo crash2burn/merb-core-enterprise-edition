@@ -28,7 +28,7 @@ module Merb
           @conditional_block = conditional_block
         end
 
-        @identifier        = options[:identifier]
+        @identifiers       = options[:identifiers]
         @segments          = []
         @symbol_conditions = {}
         @placeholders      = {}
@@ -386,15 +386,12 @@ module Merb
     # ---------- Utilities ----------
     
       def param_for_route(param)
-        if @identifier
-          case param
-            when String, Symbol, Numeric, TrueClass, FalseClass, NilClass
-              param
-            else
-              param.send(@identifier)
-          end
-        else
-          param
+        case param
+          when String, Symbol, Numeric, TrueClass, FalseClass, NilClass
+            param
+          else
+            _, identifier = @identifiers.find { |klass, _| klass === param }
+            identifier ? param.send(identifier) : param
         end
       end
     

@@ -24,7 +24,7 @@ module Merb
     @routes         = []
     @named_routes   = {}
     @compiler_mutex = Mutex.new
-    @root_behavior  = Behavior.new.defaults(:action => "index").identify(:id)
+    @root_behavior  = Behavior.new.defaults(:action => "index")
 
     # Raised when route lookup fails.
     class RouteNotFound < StandardError; end;

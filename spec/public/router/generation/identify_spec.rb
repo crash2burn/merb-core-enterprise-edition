@@ -11,7 +11,7 @@ describe "When generating URLs," do
   
   class Account < ORM
     def to_s ; "account"  ; end
-    def url  ; "/awesome" ; end
+    def url  ; "awesome" ; end
   end
   
   class User    < ORM

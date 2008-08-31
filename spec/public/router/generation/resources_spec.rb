@@ -11,9 +11,11 @@ describe "When generating URLs," do
     
     before(:each) do
       Merb::Router.prepare do
-        resources :users
-        options(:identifier => :ohhai) do
-          resources :admins
+        identify :id do
+          resources :users
+          identify :ohhai do
+            resources :admins
+          end
         end
       end
     end
