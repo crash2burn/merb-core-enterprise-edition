@@ -11,7 +11,7 @@ describe "When recognizing requests," do
         end
       end
       
-      route_to("/foo").should       have_nil_route
+      lambda { route_to("/foo") }.should raise_not_found
       route_to("/admin/foo").should have_route(:controller => "admin/foos")
     end
     
@@ -54,7 +54,7 @@ describe "When recognizing requests," do
         end
       end
       
-      route_to("/admin/foo").should          have_nil_route
+      lambda { route_to("/admin/foo") }.should raise_not_found
       route_to("/administration/foo").should have_route(:controller => "admin/foos")
     end
     
@@ -75,7 +75,7 @@ describe "When recognizing requests," do
         end
       end
       
-      route_to("/admin/foo").should have_nil_route
+      lambda { route_to("/admin/foo") }.should raise_not_found
       route_to("/foo").should       have_route(:controller => "admin/foos")
     end
     
@@ -86,7 +86,7 @@ describe "When recognizing requests," do
         end
       end
       
-      route_to("/admin/foo").should have_nil_route
+      lambda { route_to("/admin/foo") }.should raise_not_found
       route_to("/foo").should       have_route(:controller => "admin/foos")
     end
     
@@ -99,7 +99,7 @@ describe "When recognizing requests," do
         end
       end
       
-      route_to("/admin/foo").should                       have_nil_route
+      lambda { route_to("/admin/foo") }.should raise_not_found
       route_to("/admin/foo", :domain => "foo.com").should have_route(:controller => "admin/foos")
     end
     

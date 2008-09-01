@@ -15,7 +15,7 @@ describe "When recognizing requests," do
     end
     
     it "should not match a different path" do
-      route_to("/notinfo").should have_nil_route
+      lambda { route_to("/notinfo") }.should raise_not_found
     end
   end
   
@@ -33,8 +33,8 @@ describe "When recognizing requests," do
     end
     
     it "should not match any paths that don't have a post method" do
-      route_to("/foo/create/12", :method => "get").should have_nil_route
-      route_to("", :method => "get").should have_nil_route
+      lambda { route_to("/foo/create/12", :method => "get") }.should raise_not_found
+      lambda { route_to("", :method => "get") }.should raise_not_found
     end
     
     it "should combine Array elements using OR" do
@@ -44,8 +44,8 @@ describe "When recognizing requests," do
       
       route_to('/anything', :method => "get").should        have_route(:controller => "hello")
       route_to('/anything', :method => "post").should       have_route(:controller => "hello")
-      route_to('/anything', :method => "put").should_not    have_route(:controller => "hello")
-      route_to('/anything', :method => "delete").should_not have_route(:controller => "hello")
+      lambda { route_to('/anything', :method => "put")    }.should raise_not_found
+      lambda { route_to('/anything', :method => "delete") }.should raise_not_found
     end
     
     it "should be able to handle Regexps inside of condition arrays" do
@@ -55,8 +55,8 @@ describe "When recognizing requests," do
       
       route_to('/anything', :method => "get").should        have_route(:controller => "hello")
       route_to('/anything', :method => "post").should       have_route(:controller => "hello")
-      route_to('/anything', :method => "put").should_not    have_route(:controller => "hello")
-      route_to('/anything', :method => "delete").should_not have_route(:controller => "hello")
+      lambda { route_to('/anything', :method => "put")    }.should raise_not_found
+      lambda { route_to('/anything', :method => "delete") }.should raise_not_found
     end
   end
   
@@ -73,11 +73,11 @@ describe "When recognizing requests," do
     end
     
     it "should not match if the route does not match" do
-      route_to("/bar", :protocol => "http://").should have_nil_route
+      lambda { route_to("/bar", :protocol => "http://") }.should raise_not_found
     end
     
     it "should not match if the protocol does not match" do
-      route_to("/foo", :protocol => "https://").should have_nil_route
+      lambda { route_to("/foo", :protocol => "https://") }.should raise_not_found
     end
     
     it "should combine Array elements using OR" do
@@ -87,12 +87,12 @@ describe "When recognizing requests," do
       
       route_to("/hello", :method => "get").should          have_route(:controller => "hello")
       route_to("/hello", :method => "post").should         have_route(:controller => "hello")
-      route_to("/hello", :method => "put").should_not      have_route(:controller => "hello")
-      route_to("/hello", :method => "delete").should_not   have_route(:controller => "hello")
-      route_to("/goodbye", :method => "get").should_not    have_route(:controller => "hello")
-      route_to("/goodbye", :method => "post").should_not   have_route(:controller => "hello")
-      route_to("/goodbye", :method => "put").should_not    have_route(:controller => "hello")
-      route_to("/goodbye", :method => "delete").should_not have_route(:controller => "hello")
+      lambda { route_to("/hello",   :method => "put")    }.should raise_not_found
+      lambda { route_to("/hello",   :method => "delete") }.should raise_not_found
+      lambda { route_to("/goodbye", :method => "get")    }.should raise_not_found
+      lambda { route_to("/goodbye", :method => "post")   }.should raise_not_found
+      lambda { route_to("/goodbye", :method => "put")    }.should raise_not_found
+      lambda { route_to("/goodbye", :method => "delete") }.should raise_not_found
     end
   end
   
@@ -104,7 +104,7 @@ describe "When recognizing requests," do
       end
       
       route_to("/foo/123").should have_route(:bar => "123")
-      route_to("/foo/abc").should have_nil_route
+      lambda { route_to("/foo/abc") }.should raise_not_found
     end
     
     it "should be able to handle conditions with anchors" do
@@ -121,7 +121,7 @@ describe "When recognizing requests," do
       route_to("/foo/123abc").should have_route(:controller => "start", :bar => "123abc")
       route_to("/foo/abc123").should have_route(:controller => "end",   :bar => "abc123")
       route_to("/foo/ab123c").should have_route(:controller => "none",  :bar => "ab123c")
-      route_to("/foo/abcdef").should have_nil_route
+      lambda { route_to("/foo/abcdef") }.should raise_not_found
     end
     
     it "should match only if all conditions are satisied" do
@@ -133,9 +133,9 @@ describe "When recognizing requests," do
       route_to("/abcd/123").should  have_route(:foo => "abcd", :bar => "123")
       route_to("/abc/1234").should  have_route(:foo => "abc",  :bar => "1234")
       route_to("/abcd/1234").should have_route(:foo => "abcd", :bar => "1234")
-      route_to("/ab/123").should    have_nil_route
-      route_to("/abc/12").should    have_nil_route
-      route_to("/ab/12").should     have_nil_route
+      lambda { route_to("/ab/123") }.should raise_not_found
+      lambda { route_to("/abc/12") }.should raise_not_found
+      lambda { route_to("/ab/12") }.should raise_not_found
     end
     
     it "should allow creating conditions that span default segment dividers" do
@@ -143,7 +143,7 @@ describe "When recognizing requests," do
         match("/:controller", :controller => %r[^[a-z]+/[a-z]+$]).register
       end
       
-      route_to("/somewhere").should         have_nil_route
+      lambda { route_to("/somewhere") }.should raise_not_found
       route_to("/somewhere/somehow").should have_route(:controller => "somewhere/somehow")
     end
     
@@ -174,7 +174,7 @@ describe "When recognizing requests," do
       
       %w(somewhere somewhere/somehow 123/456/789 i;just/dont-understand).each do |path|
         route_to("/superblog/bar/#{path}").should have_route(:foo => "superblog", :glob => path)
-        route_to("/notablog/foo/#{path}").should have_nil_route
+        lambda { route_to("/notablog/foo/#{path}") }.should raise_not_found
       end
     end
     
@@ -185,9 +185,9 @@ describe "When recognizing requests," do
       
       route_to("/superblog/post/123").should  have_route(:blog => "superblog",  :id => "123")
       route_to("/superblawg/post/321").should have_route(:blog => "superblawg", :id => "321")
-      route_to("/superblog/post/asdf").should have_nil_route
-      route_to("/superblog1/post/123").should have_nil_route
-      route_to("/ab/12").should               have_nil_route
+      lambda { route_to("/superblog/post/asdf") }.should raise_not_found
+      lambda { route_to("/superblog1/post/123") }.should raise_not_found
+      lambda { route_to("/ab/12") }.should raise_not_found
     end
   end
   
@@ -229,7 +229,7 @@ describe "When recognizing requests," do
       end
       
       route_to("/one/two").should have_route(:first => "one", :second => "two")
-      route_to("/one").should     have_nil_route
+      lambda { route_to("/one") }.should raise_not_found
     end
     
     it "should be able to define a route and still use the context for more route definition" do
@@ -261,7 +261,7 @@ describe "When recognizing requests," do
         end
       end
       
-      route_to("/foo").should have_nil_route
+      lambda { route_to("/foo") }.should raise_not_found
       route_to("/foo", :protocol => "https://").should have_route(:controller => "foo", :action => "bar")
     end
     
@@ -272,8 +272,8 @@ describe "When recognizing requests," do
         end
       end
       
-      route_to("/").should                       have_nil_route
-      route_to("/", :domain => "foo.com").should have_nil_route
+      lambda { route_to("/") }.should raise_not_found
+      lambda { route_to("/", :domain => "foo.com") }.should raise_not_found
       route_to("/", :domain => "bar.com").should have_route(:controller => "bar", :action => "com")
     end
     
@@ -285,7 +285,7 @@ describe "When recognizing requests," do
       end
       
       route_to("/abc").should have_route(:account => "abc")
-      route_to("/123").should have_nil_route
+      lambda { route_to("/123") }.should raise_not_found
     end
     
     it "should be able to set conditions on named segment variables that haven't been used yet" do
@@ -296,7 +296,7 @@ describe "When recognizing requests," do
       end
       
       route_to("/abc").should have_route(:account => "abc")
-      route_to("/123").should have_nil_route
+      lambda { route_to("/123") }.should raise_not_found
     end
     
     it "should be able to merge path and request method conditions when both kinds are specified in the parent match statement" do
@@ -306,9 +306,9 @@ describe "When recognizing requests," do
         end
       end
       
-      route_to("/foo").should                                 have_nil_route
-      route_to("/foo/greets").should                          have_nil_route
-      route_to("/foo", :protocol => "https://").should        have_nil_route
+      lambda { route_to("/foo") }.should raise_not_found
+      lambda { route_to("/foo/greets") }.should raise_not_found
+      lambda { route_to("/foo", :protocol => "https://") }.should raise_not_found
       route_to("/foo/greets", :protocol => "https://").should have_route(:controller => "foo", :action => "bar")
     end
     

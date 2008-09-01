@@ -41,24 +41,24 @@ module Spec
       HaveRoute.new(expected, true)
     end
     
-    class HaveNilRoute
-
-      def matches?(target)
-        @target = target
-        target.last.empty?
-      end
-
-      def failure_message
-        "Expected a nil route. Got #{@target.inspect}."
-      end
-
-      def negative_failure_message
-        "Expected not to get a nil route."
-      end
-    end
-
-    def have_nil_route
-      HaveNilRoute.new
+    # class HaveNilRoute
+    # 
+    #   def matches?(target)
+    #     @target = target
+    #     target.last.empty?
+    #   end
+    # 
+    #   def failure_message
+    #     "Expected a nil route. Got #{@target.inspect}."
+    #   end
+    # 
+    #   def negative_failure_message
+    #     "Expected not to get a nil route."
+    #   end
+    # end
+    # 
+    def raise_not_found
+      raise_error(Merb::ControllerExceptions::NotFound)
     end
   end
   
@@ -96,7 +96,8 @@ module Spec
     # through Router#match.
     def route_to(path, args = {}, protocol = "http://")
       request = Request.new({:protocol => protocol, :path => path}.merge(args))
-      Merb::Router.match(request)
+      # Merb::Router.match(request)
+      Merb::Router.route_for(request)
     end
     
     def match_for(path, args = {}, protocol = "http://")

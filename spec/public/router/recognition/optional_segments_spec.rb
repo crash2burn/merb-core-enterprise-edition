@@ -24,7 +24,7 @@ describe "Recognizing requests for the routes with" do
     it_should_behave_like "a route with optional segments"
     
     it "should not match the route if the optional segment is only partially present" do
-      route_to("/hello/world").should have_nil_route
+      lambda { route_to("/hello/world") }.should raise_not_found
     end
     
     it "should not match the optional segment if the optional segment is present but doesn't match a named segment condition" do
@@ -32,7 +32,7 @@ describe "Recognizing requests for the routes with" do
         match("/:first(/:second)", :second => /^\d+$/).register
       end
       
-      route_to("/hello/world").should have_nil_route
+      lambda { route_to("/hello/world") }.should raise_not_found
     end
     
     it "should not match if the optional segment is present but not the required segment" do
@@ -40,7 +40,7 @@ describe "Recognizing requests for the routes with" do
         match("/:first(/:second)", :first => /^[a-z]+$/, :second => /^\d+$/).register
       end
       
-      route_to("/123").should have_nil_route
+      lambda { route_to("/123") }.should raise_not_found
     end
   end
   
@@ -71,8 +71,8 @@ describe "Recognizing requests for the routes with" do
         match("(/:first/abc)(/:bar)").register
       end
       
-      route_to("/abc/hello").should have_nil_route
-      route_to("/hello/world/abc").should have_nil_route
+      lambda { route_to("/abc/hello") }.should raise_not_found
+      lambda { route_to("/hello/world/abc") }.should raise_not_found
     end
   end
   
@@ -94,7 +94,7 @@ describe "Recognizing requests for the routes with" do
         match("/:first(/:second(/:third))", :second => /^\d+$/).to
       end
       
-      route_to("/hello/world").should have_nil_route
+      lambda { route_to("/hello/world") }.should raise_not_found
     end
   end
   

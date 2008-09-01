@@ -11,7 +11,7 @@ describe "When recognizing requests," do
       
       route_to("/foo/bar/baz").should  have_route(:controller => "foo", :action => "bar", :id => "baz")
       route_to("/foos/bar/baz").should have_route(:controller => "foo", :action => "bar", :id => "baz")
-      route_to("/bars/foo/baz").should have_nil_route
+      lambda { route_to("/bars/foo/baz") }.should raise_not_found
     end
     
     it "should allow mixing regular expression paths with string paths" do
@@ -21,7 +21,7 @@ describe "When recognizing requests," do
       
       route_to("/foo/baz/bar").should have_route(:controller => "foo", :action => "baz", :id => "bar")
       route_to("/bar/baz/foo").should have_route(:controller => "bar", :action => "baz", :id => "foo")
-      route_to("/for/bar/baz").should have_nil_route
+      lambda { route_to("/for/bar/baz") }.should raise_not_found
     end
     
     it "should allow mixing regular expression paths with string paths when nesting match blocks" do
@@ -33,7 +33,7 @@ describe "When recognizing requests," do
       
       route_to("/buh/foo/baz/1").should   have_route(:controller => "foo", :action => "baz", :id => "1")
       route_to("/buh/bar/baz/buh").should have_route(:controller => "bar", :action => "baz", :id => "buh")
-      route_to("/buh/baz/foo/buh").should have_nil_route
+      lambda { route_to("/buh/baz/foo/buh") }.should raise_not_found
     end
   end
 

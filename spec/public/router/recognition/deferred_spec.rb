@@ -15,7 +15,7 @@ describe "Recognizing requests for deferred routes" do
   end
 
   it "should not use the route if it does not match the defered block" do
-    route_to("/deferred").should have_nil_route
+    lambda { route_to("/deferred") }.should raise_not_found
   end
   
   it "should return the param hash returned by the block" do

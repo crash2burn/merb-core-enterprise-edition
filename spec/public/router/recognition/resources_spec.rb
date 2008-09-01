@@ -24,8 +24,8 @@ describe "When recognizing requests," do
 
     it "should not match put or delete on the collection" do
       [:put, :delete].each do |method|
-        route_to('/blogposts',    :method => method).should have_nil_route
-        route_to('/blogposts.js', :method => method).should have_nil_route
+        lambda { route_to('/blogposts',    :method => method) }.should raise_not_found
+        lambda { route_to('/blogposts.js', :method => method) }.should raise_not_found
       end
     end
   
@@ -35,8 +35,8 @@ describe "When recognizing requests," do
     end
     
     it "should not match post on the new action" do
-      route_to('/blogposts/new',     :method => :post).should have_nil_route
-      route_to('/blogposts/new.xml', :method => :post).should have_nil_route
+      lambda { route_to('/blogposts/new',     :method => :post) }.should raise_not_found
+      lambda { route_to('/blogposts/new.xml', :method => :post) }.should raise_not_found
     end
   
     it "should have a show action with an optional :format" do
@@ -61,8 +61,8 @@ describe "When recognizing requests," do
     
     it "should not match post, put, or delete on the edit action" do
       [:put, :post, :delete].each do |method|
-        route_to('/blogposts/edit',    :method => :post).should  have_nil_route
-        route_to('/blogposts/edit.hi', :method => :posts).should have_nil_route
+        lambda { route_to('/blogposts/edit',    :method => :post) }.should raise_not_found
+        lambda { route_to('/blogposts/edit.hi', :method => :posts) }.should raise_not_found
       end
     end
   
@@ -73,8 +73,8 @@ describe "When recognizing requests," do
     
     it "should not match post, put, or delete on the delete action" do
       [:put, :post, :delete].each do |method|
-        route_to('/blogposts/delete',     :method => :post).should have_nil_route
-        route_to('/blogposts/delete.flv', :method => :post).should have_nil_route
+        lambda { route_to('/blogposts/delete',     :method => :post) }.should raise_not_found
+        lambda { route_to('/blogposts/delete.flv', :method => :post) }.should raise_not_found
       end
     end
   end
@@ -142,7 +142,7 @@ describe "When recognizing requests," do
       end unless method == :delete
       
       it "should not match /#{action} on post to anything" do
-        route_to("/users/#{action}", :method => :post).should have_nil_route
+        lambda { route_to("/users/#{action}", :method => :post) }.should raise_not_found
       end unless method == :post
     end
     
@@ -157,7 +157,7 @@ describe "When recognizing requests," do
       other_methods.each do |other|
         
         it "should not route /#{action} on #{other} to anything" do
-          route_to("/users/2/#{action}", :method => other).should have_nil_route
+          lambda { route_to("/users/2/#{action}", :method => other) }.should raise_not_found
         end
         
       end
@@ -189,7 +189,7 @@ describe "When recognizing requests," do
     end
     
     it "should not match a put to /emails/bidule/merbivore_com/edit" do
-      route_to('/emails/bidule/merbivore_com/edit', :method => :put).should have_nil_route
+      lambda { route_to('/emails/bidule/merbivore_com/edit', :method => :put) }.should raise_not_found
     end
     
     it "should match a get to /emails/bidule/merbivore_com/delete to the emails controller and the delete action with username => 'bidule', domain => 'merbivore_com'" do
