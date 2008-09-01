@@ -18,22 +18,24 @@ describe Merb::Controller, " url" do
   
   before(:each) do
     Merb::Router.prepare do |r|
-      r.resources :monkeys do |m|
-        m.resources :blues do |b|
-          b.resources :pinks
+      identify :to_param do
+        r.resources :monkeys do |m|
+          m.resources :blues do |b|
+            b.resources :pinks
+          end
         end
+        r.resources :donkeys do |d|
+          d.resources :blues
+        end
+        r.resource :red do |red|
+          red.resources :blues
+        end
+        r.match(%r{/foo/(\d+)/}).to(:controller => 'asdf').name(:regexp)
+        r.match('/people/:name').
+          to(:controller => 'people', :action => 'show').name(:person)
+        r.match('/argstrs').to(:controller => "args").name(:args)
+        r.default_routes
       end
-      r.resources :donkeys do |d|
-        d.resources :blues
-      end
-      r.resource :red do |red|
-        red.resources :blues
-      end
-      r.match(%r{/foo/(\d+)/}).to(:controller => 'asdf').name(:regexp)
-      r.match('/people/:name').
-        to(:controller => 'people', :action => 'show').name(:person)
-      r.match('/argstrs').to(:controller => "args").name(:args)
-      r.default_routes
     end
     
     @controller = dispatch_to(Merb::Test::Fixtures::Controllers::Url, :index)
@@ -138,7 +140,7 @@ describe Merb::Controller, " url" do
  
   it "should match a nested resources show action" do
     @blue = Blue.new
-    @controller.url(:monkey_blue, @blue).should == "/monkeys/45/blues/13"
+    @controller.url(:monkey_blue, @blue.monkey_id, @blue).should == "/monkeys/45/blues/13"
   end
   
   it "should match the index action of nested resource with parent object" do
@@ -154,7 +156,7 @@ describe Merb::Controller, " url" do
   
   it "should match the edit action of nested resource" do
     @blue = Blue.new
-    @controller.url(:edit_monkey_blue, @blue).should == "/monkeys/45/blues/13/edit"
+    @controller.url(:edit_monkey_blue, @blue.monkey_id, @blue).should == "/monkeys/45/blues/13/edit"
   end
   
   it "should match the index action of resources nested under a resource" do
@@ -164,13 +166,13 @@ describe Merb::Controller, " url" do
   
   it "should match resource that has been nested multiple times" do
     @blue = Blue.new
-    @controller.url(:donkey_blue, @blue).should == "/donkeys/19/blues/13"
-    @controller.url(:monkey_blue, @blue).should == "/monkeys/45/blues/13"
+    @controller.url(:donkey_blue, @blue.donkey_id, @blue).should == "/donkeys/19/blues/13"
+    @controller.url(:monkey_blue, @blue.monkey_id, @blue).should == "/monkeys/45/blues/13"
   end
   
   it "should match resources nested more than one level deep" do
     @pink = Pink.new
-    @controller.url(:monkey_blue_pink, @pink).should == "/monkeys/45/blues/13/pinks/22"
+    @controller.url(:monkey_blue_pink, @pink.blue_id.monkey_id, @pink.blue_id, @pink).should == "/monkeys/45/blues/13/pinks/22"
   end
 
   it "should match resource with additional params" do
@@ -180,7 +182,7 @@ describe Merb::Controller, " url" do
 
   it "should match a nested resource with additional params" do
     @blue = Blue.new
-    @controller.url(:monkey_blue, @blue, :foo => "bar").should == "/monkeys/45/blues/13?foo=bar"
+    @controller.url(:monkey_blue, @blue.monkey_id, @blue, :foo => "bar").should == "/monkeys/45/blues/13?foo=bar"
   end
 
 end
