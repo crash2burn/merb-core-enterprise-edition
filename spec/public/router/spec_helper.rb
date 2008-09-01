@@ -139,7 +139,11 @@ end
 Spec::Runner.configure do |config|
   config.include(Spec::Helpers)
   config.include(Spec::Matchers)
+  config.before(:each) do
+    @_root_behavior = Merb::Router.root_behavior
+  end
   config.after(:each) do
+    Merb::Router.root_behavior = @_root_behavior
     Merb::Router.reset!
   end
 end

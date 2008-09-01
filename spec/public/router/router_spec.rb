@@ -22,45 +22,123 @@ describe Merb::Router do
       end
     end
     
-    # These aren't needed anymore since this is the new DSL
-    # ---
-    # it "should be able to keep track of the current builder context when calling to" do
-    #   Merb::Router.prepare do
-    #     match("/hello") do
-    #       match("/world").to(:controller => "hellos")
-    #     end
-    #   end
-    #   
-    #   route_to("/hello/world").should have_route(:controller => "hellos")
-    # end
-    # 
-    # it "should be able to keep track of the current builder context when calling to" do
-    #   Merb::Router.prepare do
-    #     match("/hello") do
-    #       to(:controller => "hellos")
-    #     end
-    #   end
-    #   
-    #   route_to("/hello").should have_route(:controller => "hellos")
-    # end
+    it "should use the default root_behavior if none is specified" do
+      Merb::Router.prepare do
+        match("/hello").to(:controller => "hello")
+      end
+      
+      route_to("/hello").should have_route(:controller => "hello", :action => "index")
+    end
     
+    it "should use the root_behavior specified externally" do
+      Merb::Router.root_behavior = Merb::Router.root_behavior.defaults(:controller => "default")
+      Merb::Router.prepare do
+        match("/hello").register
+      end
+      
+      route_to("/hello").should have_route(:controller => "default", :action => "index")
+    end
+    
+    it "should be able to chain root_behaviors" do
+      Merb::Router.root_behavior = Merb::Router.root_behavior.defaults(:controller => "default")
+      Merb::Router.root_behavior = Merb::Router.root_behavior.defaults(:action     => "default")
+      Merb::Router.prepare do
+        match("/hello").register
+      end
+      
+      route_to("/hello").should have_route(:controller => "default", :action => "default")
+    end
   end
 
   describe "#append" do
     
-    it "should be awesome"
+    it "should prepare the routes" do
+      Merb::Router.append do
+        match("/hello").to(:controller => "hello")
+      end
+      
+      route_to("/hello").should have_route(:controller => "hello")
+    end
+    
+    it "should retain previously defined routes" do
+      Merb::Router.prepare do
+        match("/hello").to(:controller => "hello")
+      end
+      
+      Merb::Router.append do
+        match("/goodbye").to(:controller => "goodbye")
+      end
+      
+      route_to("/hello").should have_route(:controller => "hello")
+    end
+    
+    it "should not overwrite any routes" do
+      Merb::Router.prepare do
+        match("/hello").to(:controller => "first")
+      end
+      
+      Merb::Router.append do
+        match("/hello").to(:controller => "second")
+      end
+      
+      route_to("/hello").should have_route(:controller => "first")
+    end
     
   end
   
   describe "#prepend" do
     
-    it "should be awesome"
+    it "should prepare the routes" do
+      Merb::Router.prepend do
+        match("/hello").to(:controller => "hello")
+      end
+      
+      route_to("/hello").should have_route(:controller => "hello")
+    end
+    
+    it "should retain previously defined routes" do
+      Merb::Router.prepare do
+        match("/hello").to(:controller => "hello")
+      end
+      
+      Merb::Router.prepend do
+        match("/goodbye").to(:controller => "goodbye")
+      end
+      
+      route_to("/hello").should have_route(:controller => "hello")
+    end
+    
+    it "should overwrite any routes" do
+      Merb::Router.prepare do
+        match("/hello").to(:controller => "first")
+      end
+      
+      Merb::Router.prepend do
+        match("/hello").to(:controller => "second")
+      end
+      
+      route_to("/hello").should have_route(:controller => "second")
+    end
     
   end
   
   describe "#reset!" do
     
-    it "should be awesome"
+    before(:each) do      
+      Merb::Router.prepare do
+        resources :users
+      end
+      Merb::Router.reset!
+    end
+    
+    it "should empty #routes and #named_routes" do
+      Merb::Router.routes.should be_empty
+      Merb::Router.named_routes.should be_empty
+    end
+    
+    it "should not be able to match routes anymore" do
+      lambda { route_to("/users") }
+    end
     
   end
   
