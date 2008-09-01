@@ -56,7 +56,7 @@ describe "When recognizing requests," do
         match("/:foo", :foo => /^[a-z]$/).register
       end
 
-      route_to("/123").should_not have_route(:foo => "123")
+      lambda { route_to("/123") }.should raise_not_found
     end
   end
   

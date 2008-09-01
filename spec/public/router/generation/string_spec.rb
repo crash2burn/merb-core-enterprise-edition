@@ -67,7 +67,7 @@ describe "When generating URLs," do
     end
 
     it "should append any extra parameters to the query string" do
-      url(:foobar, :foo => "omg", :bar => "hi2u", :fiz => "what", :biz => "bat").should == "/omg/hi2u?fiz=what&biz=bat"
+      url(:foobar, :foo => "omg", :bar => "hi2u", :fiz => "what", :biz => "bat").should =~ %r[\?(fiz=what&biz=bat|biz=bat&fiz=what)$] # "/omg/hi2u?fiz=what&biz=bat"
     end
     
     it "should not append nil parameters to the query string" do
