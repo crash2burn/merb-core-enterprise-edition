@@ -37,9 +37,20 @@ describe "When recognizing requests," do
       route_to("", :method => "get").should have_nil_route
     end
     
+    it "should combine Array elements using OR" do
+      Merb::Router.prepare do
+        match(:method => [:get, :post]).to(:controller => "hello")
+      end
+      
+      route_to(:method => "get").should        have_route(:controller => "hello")
+      route_to(:method => "post").should       have_route(:controller => "hello")
+      route_to(:method => "put").should_not    have_route(:controller => "hello")
+      route_to(:method => "delete").should_not have_route(:controller => "hello")
+    end
+    
   end
   
-  describe "a route with Request protocol condition and a path condition" do
+  describe "a route with Request method condition and a path condition" do
     
     before(:each) do
       Merb::Router.prepare do
@@ -57,6 +68,21 @@ describe "When recognizing requests," do
     
     it "should not match if the protocol does not match" do
       route_to("/foo", :protocol => "https://").should have_nil_route
+    end
+    
+    it "should combine Array elements using OR" do
+      Merb::Router.prepare do
+        match("/hello", :method => [:get, :post]).to(:controller => "hello")
+      end
+      
+      route_to("/hello", :method => "get").should          have_route(:controller => "hello")
+      route_to("/hello", :method => "post").should         have_route(:controller => "hello")
+      route_to("/hello", :method => "put").should_not      have_route(:controller => "hello")
+      route_to("/hello", :method => "delete").should_not   have_route(:controller => "hello")
+      route_to("/goodbye", :method => "get").should_not    have_route(:controller => "hello")
+      route_to("/goodbye", :method => "post").should_not   have_route(:controller => "hello")
+      route_to("/goodbye", :method => "put").should_not    have_route(:controller => "hello")
+      route_to("/goodbye", :method => "delete").should_not have_route(:controller => "hello")
     end
   end
   
