@@ -6,7 +6,7 @@ describe "When generating URLs," do
     
     before(:each) do
       Merb::Router.prepare do
-        match("/(:foobar)").defaults(:foobar => "foo").register.name(:with_default)
+        match("/(:foobar)").defaults(:foobar => "foo").name(:with_default)
       end
     end
     

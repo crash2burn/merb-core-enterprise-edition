@@ -92,7 +92,7 @@ describe "When generating URLs," do
     
     before(:each) do
       Merb::Router.prepare do
-        match("/:controller/:action").register.name(:default)
+        match("/:controller/:action").name(:default)
       end
     end
 

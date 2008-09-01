@@ -47,11 +47,13 @@ describe "When generating URLs," do
     it "should not use the name prefix if the route is named with #full_name" do
       Merb::Router.prepare do
         namespace(:admin) do
+          match("/:controller").full_name(:controller)
           match("/login").to(:controller => "home").full_name(:login)
         end
       end
       
-      url(:login).should == "/admin/login"
+      url(:controller, :controller => 'foobar').should == "/admin/foobar"
+      url(:login).should                               == "/admin/login"
     end
     
     it "should be able to prepend to the name_prefix" do

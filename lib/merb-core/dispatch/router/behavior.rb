@@ -360,16 +360,23 @@ module Merb
         unless name
           name, prefix = prefix, nil
         end
-
-        full_name = [prefix, @options[:name_prefix], name].flatten.compact.join('_')
-        @route.name = full_name
         
-        self
+        if @route
+          full_name = [prefix, @options[:name_prefix], name].flatten.compact.join('_')
+          @route.name = full_name
+          self
+        else
+          register.name(prefix, name)
+        end
       end
 
       def full_name(name)
-        @route.name = name
-        self
+        if @route
+          @route.name = name
+          self
+        else
+          register.full_name(name)
+        end
       end
       
       # ==== Parameters

@@ -6,7 +6,7 @@ describe "When generating URLs," do
     
     it "should not generate" do
       Merb::Router.prepare do
-        match(%r[/hello/world]).register.name(:regexp)
+        match(%r[/hello/world]).name(:regexp)
       end
       
       lambda { url(:regexp) }.should raise_error(Merb::Router::GenerationError)

@@ -3,7 +3,7 @@ module Merb
   class Router
     # This entire class is private and should never be accessed outside of
     # Merb::Router and Behavior
-    class Route
+    class Route #:nodoc:
       SEGMENT_REGEXP               = /(:([a-z_][a-z0-9_]+))/
       OPTIONAL_SEGMENT_REGEX       = /^.*?([\(\)])/i
       SEGMENT_REGEXP_WITH_BRACKETS = /(:[a-z_]+)(\[(\d+)\])?/
@@ -260,6 +260,7 @@ module Merb
         segments
       end
 
+      # --- Yeah, this could probably be refactored
       def compile_path_segments(compiled, segments)
         segments.each do |segment|
           if String === segment
@@ -364,6 +365,8 @@ module Merb
 
             # Note: =~ is slightly faster than .match
             %{(#{value.inspect} =~ cached_#{key} #{' && ((' + captures + ') || true)' unless captures.empty?})}
+          elsif Array === value
+            %{(#{arrays_to_regexps(value).inspect} =~ cached_#{key})}
           else
             %{(cached_#{key} == #{value.inspect})}
           end
@@ -393,6 +396,21 @@ module Merb
             _, identifier = @identifiers.find { |klass, _| klass === param }
             identifier ? param.send(identifier) : param
         end
+      end
+      
+      def arrays_to_regexps(condition)
+        return condition unless Array === condition
+        
+        source = condition.map do |value|
+          value = if Regexp === value
+            value.source
+          else
+            "^#{Regexp.escape(value.to_s)}$"
+          end
+          "(?:#{value})"
+        end
+        
+        Regexp.compile(source.join('|'))
       end
     
       def segment_level_to_s(segments)

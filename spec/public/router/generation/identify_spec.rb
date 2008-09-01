@@ -41,7 +41,7 @@ describe "When generating URLs," do
         end
       end
       
-      match("/resources/:id").register.name(:resource)
+      match("/resources/:id").name(:resource)
     end
   end
   
@@ -68,7 +68,7 @@ describe "When generating URLs," do
     
     it "should not require a block" do
       Merb::Router.prepare do
-        identify(Account => :url).match("/:account").register.name(:account)
+        identify(Account => :url).match("/:account").name(:account)
       end
       
       url(:account, :account => Account.new).should == "/awesome"

@@ -42,12 +42,22 @@ describe "When recognizing requests," do
         match(:method => [:get, :post]).to(:controller => "hello")
       end
       
-      route_to(:method => "get").should        have_route(:controller => "hello")
-      route_to(:method => "post").should       have_route(:controller => "hello")
-      route_to(:method => "put").should_not    have_route(:controller => "hello")
-      route_to(:method => "delete").should_not have_route(:controller => "hello")
+      route_to('/anything', :method => "get").should        have_route(:controller => "hello")
+      route_to('/anything', :method => "post").should       have_route(:controller => "hello")
+      route_to('/anything', :method => "put").should_not    have_route(:controller => "hello")
+      route_to('/anything', :method => "delete").should_not have_route(:controller => "hello")
     end
     
+    it "should be able to handle Regexps inside of condition arrays" do
+      Merb::Router.prepare do
+        match(:method => [/^g[aeiou]?t$/, :post]).to(:controller => "hello")
+      end
+      
+      route_to('/anything', :method => "get").should        have_route(:controller => "hello")
+      route_to('/anything', :method => "post").should       have_route(:controller => "hello")
+      route_to('/anything', :method => "put").should_not    have_route(:controller => "hello")
+      route_to('/anything', :method => "delete").should_not have_route(:controller => "hello")
+    end
   end
   
   describe "a route with Request method condition and a path condition" do
