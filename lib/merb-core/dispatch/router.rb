@@ -96,8 +96,18 @@ module Merb
           raise GenerationError, "Named route not found: #{name}"
         end
         
-        # As of now, only a has is accepted
-        params = extract_options_from_args!(args) || { :id => args.first }
+        params = extract_options_from_args!(args) || { }
+        
+        # Support for anonymous params
+        unless args.empty?
+          variables = route.variables
+          
+          raise GenerationError, "The route has #{variables.length} variables: #{variables.inspect}" if args.length > variables.length
+          
+          args.each_with_index do |param, i|
+            params[variables[i]] ||= param
+          end
+        end
         
         route.generate(params) or raise GenerationError, "Named route #{name} could not be generated with #{params.inspect}"
       end

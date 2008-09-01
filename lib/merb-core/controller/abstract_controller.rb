@@ -433,15 +433,17 @@ class Merb::AbstractController
   # generated based on it and rparams.
   # ====
   # TODO: Update this documentation
-  def url(name, rparams = {}, qparams = {})
-    name, rparams, qparams = :default, name, rparams if Hash === name
-    unless rparams.is_a?(Hash) || qparams.empty?
-      rparams = qparams.merge(:id => rparams)
+  def url(name, *args)
+    unless Symbol === name
+      args.unshift(name)
+      name = :default
     end
-    uri = Merb::Router.generate(name, rparams) 
+    
+    uri = Merb::Router.generate(name, *args)
     uri = Merb::Config[:path_prefix] + uri if Merb::Config[:path_prefix]
     uri
   end
+  
   alias_method :relative_url, :url
 
   # ==== Parameters
