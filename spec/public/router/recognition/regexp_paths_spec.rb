@@ -35,6 +35,14 @@ describe "When recognizing requests," do
       route_to("/buh/bar/baz/buh").should have_route(:controller => "bar", :action => "baz", :id => "buh")
       lambda { route_to("/buh/baz/foo/buh") }.should raise_not_found
     end
+    
+    it "should be able to handle http:// in the path" do
+      Merb::Router.prepare do
+        match(%r[^/(http://.*)]).to(:url => "[1]")
+      end
+      
+      route_to("/http://another.tld/with/path").should have_route(:url => "http://another.tld/with/path")
+    end
   end
 
 end
