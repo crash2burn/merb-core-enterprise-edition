@@ -10,7 +10,7 @@ describe "When generating URLs when there are request params available," do
     
     it "should always try to pull required params from the request if they are missing" do
       Merb::Router.prepare do
-        match("/:account/:article").name(:article)
+        match("/:project/:article").name(:article)
       end
       
       url(:article, :article => "why-carl-is-awesome").should == "/awesomo/why-carl-is-awesome"
@@ -18,7 +18,7 @@ describe "When generating URLs when there are request params available," do
     
     it "should not require any params when all the required params are available in the request" do
       Merb::Router.prepare do
-        match("/:account").name(:account)
+        match("/:project").name(:account)
       end
       
       url(:account).should == "/awesomo"
@@ -57,7 +57,7 @@ describe "When generating URLs when there are request params available," do
       url(:sequential, :one   => "hi").should == "/hello/hi/dos/tres"
       url(:sequential, :two   => "hi").should == "/hello/uno/hi/tres"
       url(:sequential, :three => "hi").should == "/hello/uno/dos/hi"
-      url(:nested,     :one   => "hi").should == "/hello/hi/dos/tres"
+      url(:nested,     :one   => "hi").should == "/hello/hi"
       url(:nested,     :two   => "hi").should == "/hello/uno/hi"
       url(:nested,     :three => "hi").should == "/hello/uno/dos/hi"
     end
@@ -81,7 +81,7 @@ describe "When generating URLs when there are request params available," do
       @request_params = { :one => '1', :two => 'two' }
       url(:numbers, :three => '3').should == '/1?three=3'
       
-      @request_params = { :one => 1, :two => 2, :three => 3 }
+      @request_params = { :one => "1", :two => "2", :three => "3" }
       url(:numbers, :four => "fouryo").should == "/1/2/3?four=fouryo"
     end
     

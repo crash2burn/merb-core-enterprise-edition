@@ -112,6 +112,7 @@ module Merb
           ruby << "  query_params = params.dup\n"
           
           with(@segments) do
+            ruby << "  include_defaults = true\n"
             ruby << "  return unless url = #{block_for_level}\n"
           end
           
@@ -137,7 +138,11 @@ module Merb
         end
   
         def segments
-          @stack.last
+          @stack.last || []
+        end
+        
+        def symbol_segments
+          segments.flatten.select { |s| Symbol === s }
         end
         
         def current_segments
@@ -156,11 +161,18 @@ module Merb
           ruby << %{ "#{combine_required_and_optional_segments}"\n}
           ruby << "end"
         end
+        
+        def check_if_defaults_should_be_included
+          ruby = ""
+          ruby << "include_defaults = "
+          symbol_segments.each { |s| ruby << "params[#{s.inspect}] || " }
+          ruby << "false"
+        end
 
         # --- Not so pretty ---
         def segment_level_matches_conditions
           conditions = current_segments.map do |segment|
-            condition = "(cached_#{segment} = params[#{segment.inspect}])"
+            condition = "(cached_#{segment} = params[#{segment.inspect}] || include_defaults && defaults[#{segment.inspect}])"
 
             if @symbol_conditions[segment] && @symbol_conditions[segment].is_a?(Regexp)
               condition << " =~ #{@symbol_conditions[segment].inspect}"
@@ -185,7 +197,8 @@ module Merb
           segments.each_with_index do |segment, i|
             if segment.is_a?(Array) && segment.any? { |s| !s.is_a?(String) }
               with(segment) do
-                optionals << %{_optional_segments_#{segment.object_id} = #{block_for_level}}
+                optionals << "#{check_if_defaults_should_be_included}\n"
+                optionals << "_optional_segments_#{segment.object_id} = #{block_for_level}"
               end
             end
           end
