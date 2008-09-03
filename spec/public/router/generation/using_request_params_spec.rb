@@ -1,8 +1,8 @@
 require File.join(File.dirname(__FILE__), '..', "spec_helper")
 
-describe "When generating URLs," do
+describe "When generating URLs when there are request params available," do
   
-  describe "a route generated when there are request params available" do
+  describe "a simple route" do
     
     before(:each) do
       @request_params = { :project => "awesomo" }
@@ -60,6 +60,29 @@ describe "When generating URLs," do
       url(:nested,     :one   => "hi").should == "/hello/hi/dos/tres"
       url(:nested,     :two   => "hi").should == "/hello/uno/hi"
       url(:nested,     :three => "hi").should == "/hello/uno/dos/hi"
+    end
+    
+  end
+  
+  describe "a route with segment conditions" do
+    
+    before(:each) do
+      Merb::Router.prepare do
+        match("/:one(/:two/:three(/:four))", :one => /^\d+$/, :two => /^\d+$/, :three => /^\d+$/, :four => /^\d+$/).name(:numbers)
+      end
+    end
+    
+    it "should use the request params if using it will satisfy all the routes' conditions" do
+      @request_params = { :one => '1', :two => '2' }
+      url(:numbers, :three => '3').should == "/1/2/3"
+    end
+    
+    it "should never generate paths that don't match the conditions and append passed params that didn't match to the query string" do
+      @request_params = { :one => '1', :two => 'two' }
+      url(:numbers, :three => '3').should == '/1?three=3'
+      
+      @request_params = { :one => 1, :two => 2, :three => 3 }
+      url(:numbers, :four => "fouryo").should == "/1/2/3?four=fouryo"
     end
     
   end

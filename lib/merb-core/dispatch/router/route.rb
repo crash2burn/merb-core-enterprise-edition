@@ -70,7 +70,7 @@ module Merb
       # === Compiled method ===
       def generate(params = {}, defaults = {})
         raise GenerationError, "Cannot generate regexp Routes" if regexp?
-        @generator[params]
+        @generator[params, defaults]
       end
 
       def compiled_statement(first = false)
@@ -92,80 +92,132 @@ module Merb
       def compile
         compile_conditions
         compile_params
-        compile_generation
+        @generator = Generator.new(@segments, @symbol_conditions, @identifiers).compiled
       end
       
-    # === Building a proc that can generate the route from params ===
-    
-      def compile_generation
-        ruby  = ""
-        ruby << "lambda do |params|\n"
-        ruby << "  query_params = params.dup\n"
-        ruby << "  return unless url = #{generation_block_for_level(segments)}\n"
-        ruby << "  query_params.delete_if { |key, value| value.nil? }\n"
-        ruby << "  unless query_params.empty?\n"
-        ruby << '    url << "?#{Merb::Request.params_to_query_string(query_params)}"' << "\n"
-        ruby << "  end\n"
-        ruby << "  url\n"
-        ruby << "end\n"
-        @generator = eval(ruby)
-      end
-      
-      def generation_block_for_level(segments)
-        ruby  = ""
-        ruby << "if #{generation_conditions_for_segment_level(segments)}\n"
-        ruby << "  #{generation_remove_used_segments_in_query_path(segments)}\n"
-        ruby << "  #{generation_optionals_for_segment_level(segments)}\n"
-        ruby << %{ "#{combine_generation_bits_for_segment_level(segments)}"\n}
-        ruby << "end"
-      end
-      
-      def generation_conditions_for_segment_level(segments)
-        conditions = segments.select { |s| Symbol === s }.map do |segment|
-          condition = "(cached_#{segment} = params[#{segment.inspect}])"
+      # The Generator class handles compiling the route down to a lambda that
+      # can generate the URL from a params hash and a default params hash.
+      class Generator #:nodoc:
+        
+        def initialize(segments, symbol_conditions, identifiers)
+          @segments          = segments
+          @symbol_conditions = symbol_conditions
+          @identifiers       = identifiers
+          @stack             = []
+        end
+        
+        def compiled
+          ruby  = ""
+          ruby << "lambda do |params, defaults|\n"
+          ruby << "  query_params = params.dup\n"
           
-          if @symbol_conditions[segment] && @symbol_conditions[segment].is_a?(Regexp)
-            condition << " =~ #{@symbol_conditions[segment].inspect}"
-          elsif @symbol_conditions[segment]
-            condition << " == #{@symbol_conditions[segment].inspect}"
+          with(@segments) do
+            ruby << "  return unless url = #{block_for_level}\n"
           end
           
-          condition
+          ruby << "  query_params.delete_if { |key, value| value.nil? }\n"
+          ruby << "  unless query_params.empty?\n"
+          ruby << '    url << "?#{Merb::Request.params_to_query_string(query_params)}"' << "\n"
+          ruby << "  end\n"
+          ruby << "  url\n"
+          ruby << "end\n"
+          
+          eval(ruby)
         end
-        conditions << "true" if conditions.empty?
-        conditions.join(" && ")
-      end
-      
-      def generation_remove_used_segments_in_query_path(segments)
-        segments = segments.select { |s| Symbol === s }
-        "#{segments.inspect}.each { |s| query_params.delete(s) }"
-      end
-      
-      def generation_optionals_for_segment_level(segments)
-        optionals = []
         
-        segments.each_with_index do |segment, i|
-          if segment.is_a?(Array) && segment.any? { |s| !s.is_a?(String) }
-            optionals << %{_optional_segments_#{segment.object_id} = #{generation_block_for_level(segment)}}
+      private
+      
+        # Cleans up methods a bunch. We don't need to pass the current segment
+        # level around everywhere anymore. It's kept track for us in the stack.
+        def with(segments, &block)
+          @stack.push(segments)
+          retval = yield
+          @stack.pop
+          retval
+        end
+  
+        def segments
+          @stack.last
+        end
+        
+        def current_segments
+          segments.select { |s| Symbol === s }
+        end
+        
+        def nested_segments
+          segments.select { |s| Array === s }.flatten.select { |s| Symbol === s }
+        end
+      
+        def block_for_level
+          ruby  = ""
+          ruby << "if #{segment_level_matches_conditions}\n"
+          ruby << "  #{remove_used_segments_in_query_path}\n"
+          ruby << "  #{generate_optional_segments}\n"
+          ruby << %{ "#{combine_required_and_optional_segments}"\n}
+          ruby << "end"
+        end
+
+        # --- Not so pretty ---
+        def segment_level_matches_conditions
+          conditions = current_segments.map do |segment|
+            condition = "(cached_#{segment} = params[#{segment.inspect}])"
+
+            if @symbol_conditions[segment] && @symbol_conditions[segment].is_a?(Regexp)
+              condition << " =~ #{@symbol_conditions[segment].inspect}"
+            elsif @symbol_conditions[segment]
+              condition << " == #{@symbol_conditions[segment].inspect}"
+            end
+
+            condition
+          end
+          
+          conditions << "true" if conditions.empty?
+          conditions.join(" && ")
+        end
+
+        def remove_used_segments_in_query_path
+          "#{current_segments.inspect}.each { |s| query_params.delete(s) }"
+        end
+
+        def generate_optional_segments
+          optionals = []
+
+          segments.each_with_index do |segment, i|
+            if segment.is_a?(Array) && segment.any? { |s| !s.is_a?(String) }
+              with(segment) do
+                optionals << %{_optional_segments_#{segment.object_id} = #{block_for_level}}
+              end
+            end
+          end
+
+          optionals.join("\n")
+        end
+
+        def combine_required_and_optional_segments
+          bits = ""
+
+          segments.each_with_index do |segment, i|
+            bits << case
+              when segment.is_a?(String) then segment
+              when segment.is_a?(Symbol) then '#{param_for_route(cached_' + segment.to_s + ')}'
+              when segment.is_a?(Array) && segment.any? { |s| !s.is_a?(String) } then '#{' + "_optional_segments_#{segment.object_id}" +'}'
+              else ""
+            end
+          end
+
+          bits
+        end
+        
+        def param_for_route(param)
+          case param
+            when String, Symbol, Numeric, TrueClass, FalseClass, NilClass
+              param
+            else
+              _, identifier = @identifiers.find { |klass, _| klass === param }
+              identifier ? param.send(identifier) : param
           end
         end
         
-        optionals.join("\n")
-      end
-      
-      def combine_generation_bits_for_segment_level(segments)
-        bits = ""
-        
-        segments.each_with_index do |segment, i|
-          bits << case
-            when segment.is_a?(String) then segment
-            when segment.is_a?(Symbol) then '#{param_for_route(cached_' + segment.to_s + ')}'
-            when segment.is_a?(Array) && segment.any? { |s| !s.is_a?(String) } then '#{' + "_optional_segments_#{segment.object_id}" +'}'
-            else ""
-          end
-        end
-        
-        bits
       end
 
     # === Conditions ===
@@ -387,16 +439,6 @@ module Merb
       end
 
     # ---------- Utilities ----------
-    
-      def param_for_route(param)
-        case param
-          when String, Symbol, Numeric, TrueClass, FalseClass, NilClass
-            param
-          else
-            _, identifier = @identifiers.find { |klass, _| klass === param }
-            identifier ? param.send(identifier) : param
-        end
-      end
       
       def arrays_to_regexps(condition)
         return condition unless Array === condition
