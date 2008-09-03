@@ -68,7 +68,7 @@ module Merb
       end
       
       # === Compiled method ===
-      def generate(params = {})
+      def generate(params = {}, defaults = {})
         raise GenerationError, "Cannot generate regexp Routes" if regexp?
         @generator[params]
       end

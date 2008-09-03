@@ -111,12 +111,6 @@ module Spec
       Merb::Router.routes[idx]
     end
 
-    # Returns a generated URL from parameters
-    # def url(name = {}, params = {})
-    #   name, params = :default, name if Hash === name
-    #   Merb::Router.generate(name, params)
-    # end
-
     # Fake request object
     class Request < OpenStruct
       def initialize(hash)

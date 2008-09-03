@@ -439,7 +439,7 @@ class Merb::AbstractController
       name = :default
     end
     
-    uri = Merb::Router.generate(name, *args)
+    uri = Merb::Router.generate(name, args, params)
     uri = Merb::Config[:path_prefix] + uri if Merb::Config[:path_prefix]
     uri
   end

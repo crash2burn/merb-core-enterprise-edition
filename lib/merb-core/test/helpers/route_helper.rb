@@ -13,7 +13,7 @@ module Merb
       # String:: The generated URL.
       def url(*args)
         name = args.first.is_a?(Symbol) ? args.shift : :default
-        Merb::Router.generate(name, *args)
+        Merb::Router.generate(name, args, @request_params || {})
       end
       
       # ==== Parameters

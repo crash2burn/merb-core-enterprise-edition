@@ -103,7 +103,7 @@ module Merb
       # Looks up route by name and generates URL using
       # given parameters. Raises GenerationError if
       # passed parameters do not match those of route.
-      def generate(name, *args)
+      def generate(name, args = [], defaults = {})
         unless route = @named_routes[name.to_sym]
           raise GenerationError, "Named route not found: #{name}"
         end
@@ -121,7 +121,7 @@ module Merb
           end
         end
         
-        route.generate(params) or raise GenerationError, "Named route #{name} could not be generated with #{params.inspect}"
+        route.generate(params, defaults) or raise GenerationError, "Named route #{name} could not be generated with #{params.inspect}"
       end
 
       def match_before_compilation(request)
