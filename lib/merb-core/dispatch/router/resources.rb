@@ -165,7 +165,7 @@ module Merb
         # ---
         # @public
         def resource(name, options = {}, &block)
-          params = { :controller => options.delete(:controller) || name.to_s }
+          params = { :controller => options.delete(:controller) || name.to_s.pluralize }
 
           options[:name_prefix]       ||= nil # Don't use a name_prefix if not needed
           options[:controller_prefix] ||= options.delete(:namespace)
