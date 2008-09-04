@@ -109,6 +109,7 @@ module Merb
         def compiled
           ruby  = ""
           ruby << "lambda do |params, defaults|\n"
+          ruby << "  fragment     = params.delete(:fragment)\n"
           ruby << "  query_params = params.dup\n"
           
           with(@segments) do
@@ -120,6 +121,7 @@ module Merb
           ruby << "  unless query_params.empty?\n"
           ruby << '    url << "?#{Merb::Request.params_to_query_string(query_params)}"' << "\n"
           ruby << "  end\n"
+          ruby << '  url << "##{fragment}" if fragment' << "\n"
           ruby << "  url\n"
           ruby << "end\n"
           

@@ -203,6 +203,23 @@ module Merb
         end
       end
       
+      # Allows for some nicer syntax when scoping blocks
+      # --- Ex:
+      # Merb::Router.prepare do
+      #   with(:controller => "users") do
+      #     match("/signup").to(:action => "signup")
+      #     match("/login").to(:action => "login")
+      #     match("/logout").to(:action => "logout")
+      #   end
+      # end
+      alias_method :with, :to
+      
+      # Allows for nicer syntax when registering routes with no params
+      # --- Ex:
+      # Merb::Router.prepare do
+      #   match("/:controller(/:action(/:id))(.:format)").register
+      # end
+      #
       alias_method :register, :to
       
       # Sets default values for route parameters. If no value for the key
@@ -360,14 +377,8 @@ module Merb
         unless name
           name, prefix = prefix, nil
         end
-        
-        if @route
-          full_name = [prefix, @options[:name_prefix], name].flatten.compact.join('_')
-          @route.name = full_name
-          self
-        else
-          register.name(prefix, name)
-        end
+
+        full_name([prefix, @options[:name_prefix], name].flatten.compact.join('_'))
       end
 
       def full_name(name)
