@@ -79,22 +79,27 @@ end
 
 desc "Run :package and install the resulting .gem"
 task :install => :package do
-  sh %{#{sudo} gem install #{install_home} --local pkg/#{GEM_NAME}-#{GEM_VERSION}.gem --no-rdoc --no-ri}
+  sh install_command(GEM_NAME, GEM_VERSION)
 end
 
 desc "Install Merb with development dependencies"
 task :dev_install => :package do
-  sh %{#{sudo} gem install #{install_home} --local pkg/#{GEM_NAME}-#{GEM_VERSION}.gem --no-rdoc --no-ri --development}  
+  sh dev_install_command(GEM_NAME, GEM_VERSION)  
 end
 
 desc "Run :package and install the resulting .gem with jruby"
 task :jinstall => :package do
-  sh %{#{sudo} jruby -S gem install #{install_home} pkg/#{NAME}-#{Merb::VERSION}.gem --no-rdoc --no-ri}
+  sh jinstall_command(GEM_NAME, GEM_VERSION)
+end
+
+desc "Run :package and install the resulting .gem with jruby (development dependencies)"
+task :jinstall => :package do
+  sh dev_jinstall_command(GEM_NAME, GEM_VERSION)
 end
 
 desc "Run :clean and uninstall the .gem"
 task :uninstall => :clean do
-  sh %{#{sudo} gem uninstall #{NAME}}
+  sh uninstall_command(GEM_NAME)
 end
 
 CLEAN.include ["**/.*.sw?", "pkg", "lib/*.bundle", "*.gem", "doc/rdoc", ".config", "coverage", "cache"]
@@ -179,9 +184,11 @@ task :aok => [:specs, :rcov]
 def setup_specs(name, spec_cmd='spec', run_opts = "-c")
   desc "Run all specs (#{name})"
   task "specs:#{name}" do
-    run_specs("spec/**/*_spec.rb", spec_cmd, ENV['RSPEC_OPTS'] || run_opts)
+    except = []
+    except += Dir["spec/**/memcache*_spec.rb"] if ENV['MEMCACHED'] == 'no'
+    run_specs("spec/**/*_spec.rb", spec_cmd, ENV['RSPEC_OPTS'] || run_opts, except)
   end
-
+  
   desc "Run private specs (#{name})"
   task "specs:#{name}:private" do
     run_specs("spec/private/**/*_spec.rb", spec_cmd, ENV['RSPEC_OPTS'] || run_opts)
@@ -191,7 +198,7 @@ def setup_specs(name, spec_cmd='spec', run_opts = "-c")
   task "specs:#{name}:public" do
     run_specs("spec/public/**/*_spec.rb", spec_cmd, ENV['RSPEC_OPTS'] || run_opts)
   end
-
+  
   # With profiling formatter
   desc "Run all specs (#{name}) with profiling formatter"
   task "specs:#{name}_profiled" do
@@ -206,7 +213,7 @@ def setup_specs(name, spec_cmd='spec', run_opts = "-c")
   desc "Run public specs (#{name}) with profiling formatter"
   task "specs:#{name}_profiled:public" do
     run_specs("spec/public/**/*_spec.rb", spec_cmd, "-c -f o")
-  end
+  end  
 end
 
 setup_specs("mri", "spec")
