@@ -150,4 +150,46 @@ describe Merb::Router do
 
   end
 
+  describe "#capture" do
+    
+    it "should capture the routes and the named routes defined in the block" do
+      Merb::Router.prepare do
+        match("/one").register
+        match("/two").name(:two)
+        
+        routes, named_routes = Merb::Router.capture do
+          match("/three").register
+          match("/four").name(:four)
+        end
+        
+        routes.should       == Merb::Router.routes[2..-1]
+        named_routes.should == Merb::Router.named_routes.reject { |key, _| key == :two }
+      end
+    end
+    
+    it "should still recognize the routes generated before, inside, and after a capture block" do
+      Merb::Router.prepare do
+        match("/one").to(:controller => "one")
+        Merb::Router.capture do
+          match("/two").to(:controller => "two")
+        end
+        match("/three").to(:controller => "three")
+      end
+      
+      route_to("/one").should   have_route(:controller => "one")
+      route_to("/two").should   have_route(:controller => "two")
+      route_to("/three").should have_route(:controller => 'three')
+    end
+    
+    it "should not return anything if nothing was defined inside of the block" do
+      routes, named_routes = nil, nil
+      Merb::Router.prepare do
+        routes, named_routes = Merb::Router.capture { }
+      end  
+      
+      routes.should       be_empty
+      named_routes.should be_empty
+    end
+  end
+
 end

@@ -377,7 +377,7 @@ module Merb
         @defaults.merge(@params).each do |key, value|
           if value.nil?
             @params.delete(key)
-          elsif String === value
+          elsif value.is_a?(String)
             @params[key] = compile_param(value)
           else
             @params[key] = value.inspect
@@ -423,7 +423,8 @@ module Merb
         statements = []
 
         conditions.each_pair do |key, value|
-          statements << if Regexp === value
+          statements << case value
+          when Regexp
             captures = ""
 
             if (max = capturing_parentheses_count(value)) > 0
@@ -434,7 +435,7 @@ module Merb
 
             # Note: =~ is slightly faster than .match
             %{(#{value.inspect} =~ cached_#{key} #{' && ((' + captures + ') || true)' unless captures.empty?})}
-          elsif Array === value
+          when Array
             %{(#{arrays_to_regexps(value).inspect} =~ cached_#{key})}
           else
             %{(cached_#{key} == #{value.inspect})}

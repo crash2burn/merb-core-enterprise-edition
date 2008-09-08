@@ -23,7 +23,7 @@ module Merb
       # yielded behavior object
       # ---
       # @private
-      class Proxy
+      class Proxy #:nodoc:
         # Undefine as many methods as possible so that everything can be proxied
         # along to the behavior
         instance_methods.each { |m| undef_method m unless %w[ __id__ __send__ class kind_of? respond_to? assert_kind_of should should_not instance_variable_set instance_variable_get instance_eval].include?(m) }
@@ -81,7 +81,7 @@ module Merb
       # Behavior:: The initialized Behavior object
       #---
       # @private
-      def initialize(proxy = nil, conditions = {}, params = {}, defaults = {}, identifiers = {}, options = {})
+      def initialize(proxy = nil, conditions = {}, params = {}, defaults = {}, identifiers = {}, options = {}) #:nodoc:
         @proxy       = proxy
         @conditions  = conditions
         @params      = params
@@ -92,36 +92,41 @@ module Merb
         stringify_condition_values
       end
 
-      # Matches a +path+ and any number of optional request methods as
-      # conditions of a route. Alternatively, +path+ can be a hash of
-      # conditions, in which case +conditions+ is ignored.
+      # Defines the +conditions+ that are required to match a Request. Each
+      # +condition+ is applied to a method of the Request object. Conditions
+      # can also be applied to segments of the +path+.
+      #
+      # If #match is passed a block, it will create a new route scope with
+      # the conditions passed to it and yield to the block such that all
+      # routes that are defined in the block have the conditions applied
+      # to them.
       #
       # ==== Parameters
       #
       # path<String, Regexp>::
-      #   When passing a string as +path+ you're defining a literal definition
-      #   for your route. Using a colon, ex.: ":login", defines both a capture
-      #   and a named param.
-      #   When passing a regular expression you can define captures explicitly
-      #   within the regular expression syntax.
+      #   The pattern against which Merb::Request path is matched.
+      #
+      #   When +path+ is a String, any substring that is wrapped in parenthesis
+      #   is considered optional and any segment that begins with a colon, ex.:
+      #   ":login", defines both a capture and a named param. Extra conditions
+      #   can then be applied each named param individually.
+      #
+      #   When +path+ is a Regexp, the pattern is left untouched and the
+      #   Merb::Request path is matched against it as is.
+      #
       #   +path+ is optional.
+      #
       # conditions<Hash>::
       #   Additional conditions that the request must meet in order to match.
-      #   The keys must be methods that the Merb::Request instance will respond
-      #   to.  The value is the string or regexp that matched the returned value.
+      #   The keys must be the names of previously defined path segments or
+      #   be methods that the Merb::Request instance will respond to.  The
+      #   value is the string or regexp that matched the returned value.
       #   Conditions are inherited by child routes.
       #
-      #   The following have special meaning:
-      #   * :method -- Limit this match based on the request method. (GET,
-      #     POST, PUT, DELETE)
-      #   * :path -- Used internally to maintain URL form information
-      #   * :controller and :action -- These can be used here instead of '#to', and
-      #     will be inherited in the block.
-      #   * :params -- Sets other key/value pairs that are placed in the params
-      #     hash. The value must be a hash.
       # &block::
-      #   Passes a new instance of a Behavior object into the optional block so
-      #   that sub-matching and routes nesting may occur.
+      #   All routes defined in the block will be scoped to the conditions
+      #   defined by the #match method. The new Behavior instance is optionally
+      #   yielded to the block.
       #
       # ==== Returns
       # Behavior::
@@ -134,26 +139,33 @@ module Merb
       #
       #   # registers /foo/bar to controller => "foo", :action => "bar"
       #   # and /foo/baz to controller => "foo", :action => "baz"
-      #   r.match "/foo", :controller=>"foo" do |f|
-      #     f.match("/bar").to(:action => "bar")
-      #     f.match("/baz").to(:action => "caz")
+      #   match("/foo") do
+      #     match("/bar").to(:controller => "foo", :action => "bar")
+      #     match("/baz").to(:controller => "foo", :action => "caz")
       #   end
       #
+      #   # Checks the format of the segments against the specified Regexp
+      #   match("/:string/:number", :string => /[a-z]+/, :number => /\d+/).
+      #     to(:controller => "string_or_numbers")
+      #
+      #   # Equivalent to the default_route
+      #   match("/:controller(/:action(:id))(.:format)").register
+      #
       #   #match only if the browser string contains MSIE or Gecko
-      #   r.match ('/foo', :user_agent => /(MSIE|Gecko)/ )
-      #        .to({:controller=>'foo', :action=>'popular')
+      #   match("/foo", :user_agent => /(MSIE|Gecko)/ )
+      #        .to(:controller => 'foo', :action => 'popular')
       #
       #   # Route GET and POST requests to different actions (see also #resources)
-      #   r.match('/foo', :method=>:get).to(:action=>'show')
-      #   r.match('/foo', :method=>:post).to(:action=>'create')
+      #   r.match('/foo', :method => :get).to(:action => 'show')
+      #   r.match('/foo', :method => :post).to(:action => 'create')
       #
       #   # match also takes regular expressions
       #
       #   r.match(%r[/account/([a-z]{4,6})]).to(:controller => "account",
       #      :action => "show", :id => "[1]")
       #
-      #   r.match(/\/?(en|es|fr|be|nl)?/).to(:language => "[1]") do |l|
-      #     l.match("/guides/:action/:id").to(:controller => "tour_guides")
+      #   r.match(%r{/?(en|es|fr|be|nl)?}).to(:language => "[1]") do
+      #     match("/guides/:action/:id").to(:controller => "tour_guides")
       #   end
       #---
       # @public
@@ -420,7 +432,7 @@ module Merb
       
     protected
       
-      def to_route(params = {}, &conditional_block)
+      def to_route(params = {}, &conditional_block) # :nodoc:
         
         raise Error, "The route has already been committed." if @route
 
@@ -450,7 +462,7 @@ module Merb
 
     private
     
-      def stringify_condition_values
+      def stringify_condition_values # :nodoc:
         @conditions.each do |key, value|
           unless value.nil? || Regexp === value || Array === value
             @conditions[key] = value.to_s
@@ -458,7 +470,7 @@ module Merb
         end
       end
     
-      def with_behavior_context(behavior, &block)
+      def with_behavior_context(behavior, &block) # :nodoc:
         if block_given?
           @proxy.push(behavior)
           retval = yield(behavior)
@@ -467,7 +479,7 @@ module Merb
         behavior
       end
 
-      def merge_paths(path)
+      def merge_paths(path) # :nodoc:
         [@conditions[:path], path.freeze].flatten.compact
       end
 
