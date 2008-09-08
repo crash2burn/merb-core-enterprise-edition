@@ -308,7 +308,7 @@ describe "When recognizing requests," do
         end
       end
       
-      route_to('/admin/blogposts/1/foo', :method => :get).should have_route(:controller => 'admin/foo', :action => 'show', :blogpost_id => '1', :id => nil)
+      route_to('/admin/blogposts/1/foo', :method => :get).should have_route(:controller => 'admin/foos', :action => 'show', :blogpost_id => '1', :id => nil)
     end
   
     it "should match a get to /my_admin/blogposts to the blogposts controller with a custom patch setting" do
@@ -330,7 +330,7 @@ describe "When recognizing requests," do
         end
       end
       
-      route_to('/blogposts/1/foo', :method => :get).should have_route(:controller => 'admin/foo', :action => 'show', :blogpost_id => '1', :id => nil)
+      route_to('/blogposts/1/foo', :method => :get).should have_route(:controller => 'admin/foos', :action => 'show', :blogpost_id => '1', :id => nil)
     end
   end
 
