@@ -234,10 +234,12 @@ module Merb
       #   the current Behavior.
       # ---
       # @public
-      def defaults(defaults = {}, &block)
+      def default(defaults = {}, &block)
         behavior = Behavior.new(@proxy, @conditions, @params, @defaults.merge(defaults), @identifiers, @options)
         with_behavior_context(behavior, &block)
       end
+      
+      alias_method :defaults, :default
       
       # Sets various miscellaneous route options. The currently supported
       # options are as follow:

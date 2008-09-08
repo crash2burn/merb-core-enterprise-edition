@@ -144,15 +144,15 @@ module Merb
         end
         
         def symbol_segments
-          segments.flatten.select { |s| Symbol === s }
+          segments.flatten.select { |s| s.is_a?(Symbol)  }
         end
         
         def current_segments
-          segments.select { |s| Symbol === s }
+          segments.select { |s| s.is_a?(Symbol) }
         end
         
         def nested_segments
-          segments.select { |s| Array === s }.flatten.select { |s| Symbol === s }
+          segments.select { |s| s.is_a?(Array) }.flatten.select { |s| s.is_a?(Symbol) }
         end
       
         def block_for_level
@@ -228,7 +228,7 @@ module Merb
             when String, Symbol, Numeric, TrueClass, FalseClass, NilClass
               param
             else
-              _, identifier = @identifiers.find { |klass, _| klass === param }
+              _, identifier = @identifiers.find { |klass, _| param.is_a?(klass) }
               identifier ? param.send(identifier) : param
           end
         end
@@ -261,16 +261,17 @@ module Merb
         return nil if path.nil? || path.empty?
 
         path.each do |part|
-          if Regexp === part
+          case part
+          when Regexp
             @regexp   = true
             @segments = []
             compiled << part.source.sub(/^\^/, '').sub(/\$$/, '')
-          elsif String === part
+          when String
             segments = segments_with_optionals_from_string(part.dup)
             compile_path_segments(compiled, segments)
             # Concat the segments
             unless regexp?
-              if String === @segments[-1] && String === segments[0]
+              if @segments[-1].is_a?(String) && segments[0].is_a?(String)
                 @segments[-1] << segments.shift
               end
               @segments.concat segments
@@ -280,7 +281,7 @@ module Merb
           end
         end
         
-        @variables = @segments.flatten.select { |s| Symbol === s }
+        @variables = @segments.flatten.select { |s| s.is_a?(Symbol)  }
 
         compiled
       end
@@ -330,15 +331,16 @@ module Merb
       # --- Yeah, this could probably be refactored
       def compile_path_segments(compiled, segments)
         segments.each do |segment|
-          if String === segment
+          case segment
+          when String
             compiled << Regexp.escape(segment)
-          elsif Symbol === segment
+          when Symbol
             condition = (@symbol_conditions[segment] ||= @conditions.delete(segment))
             compiled << compile_segment_condition(condition)
             # Create a param for the Symbol segment if none already exists
             @params[segment] = "#{segment.inspect}" unless @params.has_key?(segment)
             @placeholders[segment] ||= capturing_parentheses_count(compiled)
-          elsif Array === segment
+          when Array
             compiled << "(?:"
             compile_path_segments(compiled, segment)
             compiled << ")?"
@@ -351,7 +353,7 @@ module Merb
       # Handles anchors in Regexp conditions
       def compile_segment_condition(condition)
         return "(#{SEGMENT_CHARACTERS}+)" unless condition
-        return "(#{condition})"           unless Regexp === condition
+        return "(#{condition})"           unless condition.is_a?(Regexp)
 
         condition = condition.source
         # Handle the start anchor
@@ -456,10 +458,10 @@ module Merb
     # ---------- Utilities ----------
       
       def arrays_to_regexps(condition)
-        return condition unless Array === condition
+        return condition unless condition.is_a?(Array)
         
         source = condition.map do |value|
-          value = if Regexp === value
+          value = if value.is_a?(Regexp)
             value.source
           else
             "^#{Regexp.escape(value.to_s)}$"
@@ -481,7 +483,7 @@ module Merb
       end
 
       def capturing_parentheses_count(regexp)
-        regexp = regexp.source if Regexp === regexp
+        regexp = regexp.source if regexp.is_a?(Regexp)
         regexp.scan(/(?!\\)[(](?!\?[#=:!>-imx])/).length
       end
     end
