@@ -73,7 +73,7 @@ module Merb
         @generator[params, defaults]
       end
 
-      def compiled_statement(first = false)
+      def compiled_statement(first)
         els_if = first ? '  if ' : '  elsif '
 
         code = ""

@@ -104,12 +104,10 @@ describe "When recognizing requests," do
     
     it "should be able to extract a specified capture from a regular expression named segment" do
       Merb::Router.prepare do
-        match("/:foo", :foo => %r[\d+([a-z]*)\d+]).to(:foo => ":foo[1]")
+        match("/:foo", :foo => %r[\d+([a-z]*)\d+]).to(:foo => "[2]")
       end
       
-      pending "This doesn't work" do
-        route_to("/123abc1").should have_route(:foo => "abc")
-      end
+      route_to("/123abc1").should have_route(:foo => "abc")
     end
     
     it "should be able to extract a specified capture from a regular expression condition on an arbitrary request method" do

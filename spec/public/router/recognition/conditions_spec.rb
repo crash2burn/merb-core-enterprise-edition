@@ -313,7 +313,6 @@ describe "When recognizing requests," do
     end
     
     it "allows wrapping of nested routes all having shared argument with PREDEFINED VALUES" do
-      pending "I'm not sure which file this spec should live."
       Merb::Router.prepare do
         match(%r{/?(en|es|fr|be|nl)?}).to(:language => "[1]") do
           match("/guides/:action/:id").to(:controller => "tour_guides")
