@@ -1,19 +1,7 @@
 module Merb
+  
   class Router
-    #
-    # Behavior has been refactored so that it's only purpose is to describe routes.
-    #
-    # As of now, it collects only two things: conditions and params. When a new
-    # condition or param has the same key as an older one, the new one overwrites
-    # the old one. This is true for all cases EXCEPT conditions[:path].
-    #
-    # When nesting behaviors, conditions[:path] is appended to. I didn't want to
-    # handle any of of the logic of joining strings with other strings and
-    # regular expressions in Behavior, so I store conditions[:path] as an Array.
-    # Everytime a new condition[:path] is defined, it is appended to the Array.
-    # All the logic to merge the elements of the Array is in Route.
-    # ---
-    # @private
+    
     class Behavior
 
       class Error < StandardError; end;
@@ -125,8 +113,10 @@ module Merb
       #
       # &block::
       #   All routes defined in the block will be scoped to the conditions
-      #   defined by the #match method. The new Behavior instance is optionally
-      #   yielded to the block.
+      #   defined by the #match method.
+      #
+      # ==== Block parameters
+      # r<Behavior>:: +optional+ - The match behavior object.
       #
       # ==== Returns
       # Behavior::
@@ -184,22 +174,23 @@ module Merb
       #
       # ==== Parameters
       # params<Hash>:: The parameters the route maps to.
+      #
       # &block::
-      #   Optional block. A new Behavior object is yielded and further #to
-      #   operations may be called in the block.
+      #   All routes defined in the block will be scoped to the params
+      #   defined by the #to method.
       #
       # ==== Block parameters
-      # new_behavior<Behavior>:: The child behavior.
+      # r<Behavior>:: +optional+ - The to behavior object.
       #
       # ==== Returns
       # Route:: It registers a new route and returns it.
       #
       # ==== Examples
-      #   r.match('/:controller/:id).to(:action => 'show')
+      #   match('/:controller/:id).to(:action => 'show')
       #
-      #   r.to :controller => 'simple' do |s|
-      #     s.match('/test').to(:action => 'index')
-      #     s.match('/other').to(:action => 'other')
+      #   to(:controller => 'simple') do
+      #     match('/test').to(:action => 'index')
+      #     match('/other').to(:action => 'other')
       #   end
       #---
       # @public
@@ -215,7 +206,7 @@ module Merb
         end
       end
       
-      # Allows for some nicer syntax when scoping blocks
+      # Equivalent of #to. Allows for some nicer syntax when scoping blocks
       # --- Ex:
       # Merb::Router.prepare do
       #   with(:controller => "users") do
@@ -226,7 +217,7 @@ module Merb
       # end
       alias_method :with, :to
       
-      # Allows for nicer syntax when registering routes with no params
+      # Equivalent of #to. Allows for nicer syntax when registering routes with no params
       # --- Ex:
       # Merb::Router.prepare do
       #   match("/:controller(/:action(/:id))(.:format)").register
@@ -240,10 +231,14 @@ module Merb
       #
       # ==== Parameters
       # defaults<Hash>::
-      #   The route's default values.
+      #   The default values for named segments.
+      #
       # &block::
-      #   Optional block. A new Behavior object is yielded scoped with
-      #   the current Behavior.
+      #   All routes defined in the block will be scoped to the defaults defined
+      #   by the #default method.
+      #
+      # ==== Block parameters
+      # r<Behavior>:: +optional+ - The defaults behavior object.
       # ---
       # @public
       def default(defaults = {}, &block)
@@ -253,11 +248,26 @@ module Merb
       
       alias_method :defaults, :default
       
-      # Sets various miscellaneous route options. The currently supported
-      # options are as follow:
-      # * :controller_prefix
-      # * :name_prefix
-      # * :identifier
+      # Allows the fine tuning of certain router options.
+      #
+      # ==== Parameters
+      # options<Hash>::
+      #   The options to set for all routes defined in the scope. The currently
+      #   supported options are:
+      #   * :controller_prefix - The module that the controller is included in.
+      #   * :name_prefix       - The prefix added to all routes named with #name
+      #
+      # &block::
+      #   All routes defined in the block will be scoped to the options defined
+      #   by the #options method.
+      #
+      # ==== Block parameters
+      # r<Behavior>:: The options behavior object. This is optional
+      #
+      # ==== Examples
+      #   # If :group is not matched in the path, it will be "registered" instead
+      #   # of nil.
+      #   match("/users(/:group)").default(:group => "registered")
       # ---
       # @public
       def options(opts = {}, &block)
@@ -275,23 +285,28 @@ module Merb
       # separation to your routes.
       #
       # ==== Parameters
-      # name_or_path<String, Symbol>:: The name or path of the namespace.
-      # options<Hash>:: Optional hash, set :path if you want to override what appears on the url
+      # name_or_path<String, Symbol>::
+      #   The name or path of the namespace.
+      #
+      # options<Hash>::
+      #   Optional hash, set :path if you want to override what appears on the url
+      #
       # &block::
-      #   A new Behavior instance is yielded in the block for nested resources.
+      #   All routes defined in the block will be scoped to the namespace defined
+      #   by the #namespace method.
       #
       # ==== Block parameters
-      # r<Behavior>:: The namespace behavior object.
+      # r<Behavior>:: The namespace behavior object. This is optional
       #
       # ==== Examples
-      #   r.namespace :admin do |admin|
-      #     admin.resources :accounts
-      #     admin.resource :email
+      #   namespace :admin do
+      #     resources :accounts
+      #     resource :email
       #   end
       #
       #   # /super_admin/accounts
-      #   r.namespace(:admin, :path=>"super_admin") do |admin|
-      #     admin.resources :accounts
+      #   namespace(:admin, :path=>"super_admin") do
+      #     resources :accounts
       #   end
       # ---
       # @public
@@ -310,7 +325,24 @@ module Merb
         behavior.options(opts, &block)
       end
       
-      # Configures how params are converted for routes
+      # Sets a method for instances of specified Classes to be called before
+      # insertion into a route. This is useful when using models and want a
+      # specific method to be called on it (For example, for ActiveRecord::Base
+      # it would be #to_param).
+      #
+      # The default method called on objects is #to_s.
+      #
+      # ==== Paramters
+      # identifiers<Hash>::
+      #   The keys are Classes and the values are the method that instances of the specified
+      #   class should have called on.
+      #
+      # &block::
+      #   All routes defined in the block will be call the specified methods during
+      #   generation.
+      #
+      # ==== Block parameters
+      # r<Behavior>:: The identify behavior object. This is optional
       # ---
       # @public
       def identify(identifiers = {}, &block)
@@ -325,13 +357,13 @@ module Merb
       end
       
       # Creates the most common routes /:controller/:action/:id.format when
-      # called with no arguments.
-      # You can pass a hash or a block to add parameters or override the default
-      # behavior.
+      # called with no arguments. You can pass a hash or a block to add parameters
+      # or override the default behavior.
       #
       # ==== Parameters
       # params<Hash>::
       #   This optional hash can be used to augment the default settings
+      #
       # &block::
       #   When passing a block a new behavior is yielded and more refinement is
       #   possible.
@@ -395,6 +427,14 @@ module Merb
         full_name([prefix, @options[:name_prefix], name].flatten.compact.join('_'))
       end
 
+      # Names this route in Router. Name must be a Symbol. The current
+      # name_prefix is ignored.
+      #
+      # ==== Parameters
+      # symbol<Symbol>:: The name of the route.
+      #
+      # ==== Raises
+      # ArgumentError:: symbol is not a Symbol.
       def full_name(name)
         if @route
           @route.name = name

@@ -37,10 +37,22 @@ module Merb
       # @private
       attr_accessor :routes, :named_routes, :root_behavior
       
-      # Yields router scope to the block and inserts resulting routes
-      # between +first+ and +last+ in resulting routing table.
+      # Creates a route building context and evaluates the block in it. A
+      # copy of +root_behavior+ (and instance of Behavior) is copied as
+      # the context.
       #
-      # Compiles routes after block evaluation.
+      # ==== Parameters
+      # first<Array>::
+      #   An array containing routes that should be prepended to the routes
+      #   defined in the block.
+      #
+      # last<Array>::
+      #   An array containing routes that should be appended to the routes
+      #   defined in the block.
+      #
+      # ==== Returns
+      # Merb::Router::
+      #   Returns self to allow chaining of methods.
       def prepare(first = [], last = [], &block)
         @routes = []
         root_behavior.with_proxy(&block)
@@ -71,7 +83,8 @@ module Merb
         [self.routes - routes_before, self.named_routes.except(*named_route_keys_before)]
       end
       
-      # Clears routes table.
+      # Clears the routing table. Route generation and request matching
+      # won't work anymore until a new routing table is built.
       def reset!
         class << self
           alias_method :match, :match_before_compilation
@@ -79,8 +92,9 @@ module Merb
         self.routes, self.named_routes = [], {}
       end
       
-      # Finds route matching URI of the request and
-      # returns a tuple of [route index, route params].
+      # Finds route matching URI of the request and returns a tuple of
+      # [route index, route params]. This method is called by the
+      # dispatcher and isn't as useful in applications.
       #
       # ==== Parameters
       # request<Merb::Request>:: request to match.
@@ -90,7 +104,10 @@ module Merb
       #   Two-tuple: route index and route parameters. Route
       #   parameters are :controller, :action and all the named
       #   segments of the route.
-      def route_for(request)
+      #
+      # ---
+      # @private
+      def route_for(request) #:nodoc:
         index, params = match(request)
         route = routes[index] if index
         if !route
@@ -100,10 +117,24 @@ module Merb
         [route, params]
       end
 
-      # Looks up route by name and generates URL using
-      # given parameters. Raises GenerationError if
-      # passed parameters do not match those of route.
-      def generate(name, args = [], defaults = {})
+      # Looks up a route by name and generates a URL using the given parameters.
+      # Raises GenerationError if passed parameters do not match those of the route.
+      #
+      # === Parameters
+      # name<Symbol>::
+      #   Name of the route to generate. When building routes, the name can be
+      #   defined using #name or #full_name.
+      #
+      # args<Array>::
+      #   The arguments that were passed to #url are proxied to #generate.
+      #
+      # defaults<Hash>::
+      #   Parameters to use if required parameters are missing. These are pulled
+      #   from the current request.
+      # 
+      # ---
+      # @private
+      def generate(name, args = [], defaults = {}) #:nodoc:
         unless route = @named_routes[name.to_sym]
           raise GenerationError, "Named route not found: #{name}"
         end
@@ -124,7 +155,8 @@ module Merb
         route.generate(params, defaults) or raise GenerationError, "Named route #{name} could not be generated with #{params.inspect}"
       end
 
-      def match_before_compilation(request)
+      # Just a placeholder for the compiled match method
+      def match_before_compilation(request) #:nodoc:
         raise NotCompiledError, "The routes have not been compiled yet"
       end
 
