@@ -95,7 +95,7 @@ module Merb
     # into request params hash.
     def find_route!
       @route, @route_params = Merb::Router.route_for(self)
-      @params.merge! @route_params
+      params.merge! @route_params
     end
 
     # Redirect status of route matched this request.
