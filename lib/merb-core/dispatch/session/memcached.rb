@@ -1,3 +1,9 @@
+begin
+  require "memcached"
+rescue LoadError => e
+  puts "Install memcached gem to use Memcached session store"
+end
+
 module Merb
 
   # Sessions stored in memcached.
@@ -5,7 +11,6 @@ module Merb
   # Requires setup in your +init.rb+.
   #
   #   Merb::BootLoader.after_app_loads do
-  #     require 'memcached'
   #     Merb::MemcacheSession.store = 
   #        Memcached.new('127.0.0.1:11211', { :namespace => 'my_app' })
   #   end
