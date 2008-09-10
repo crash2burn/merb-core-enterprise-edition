@@ -52,6 +52,23 @@ describe "When recognizing requests," do
       route_to("/one/two").should have_route(:foo => nil, :bar => nil)
     end
     
+    it "should match single character names" do
+      Merb::Router.prepare do
+        match("/:x/:y").register
+      end
+      
+      route_to("/40/20").should have_route(:x => "40", :y => "20")
+    end
+    
+    it "should not swallow trailing underscores in the segment name" do
+      Merb::Router.prepare do
+        match("/:foo_").register
+      end
+      
+      route_to("/buh_").should have_route(:foo => "buh")
+      lambda { route_to("/buh").should }.should raise_error(Merb::ControllerExceptions::NotFound)
+    end
+    
   end
   
   describe "a route with variables spread across match blocks" do
