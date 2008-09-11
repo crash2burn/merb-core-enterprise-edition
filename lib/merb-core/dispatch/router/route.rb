@@ -104,6 +104,8 @@ module Merb
           @symbol_conditions = symbol_conditions
           @identifiers       = identifiers
           @stack             = []
+          @opt_segment_count = 0
+          @opt_segment_stack = [[]]
         end
         
         def compiled
@@ -199,8 +201,11 @@ module Merb
           segments.each_with_index do |segment, i|
             if segment.is_a?(Array) && segment.any? { |s| !s.is_a?(String) }
               with(segment) do
+                @opt_segment_stack.last << (optional_name = "_optional_segments_#{@opt_segment_count += 1}")
+                @opt_segment_stack.push []
                 optionals << "#{check_if_defaults_should_be_included}\n"
-                optionals << "_optional_segments_#{segment.object_id} = #{block_for_level}"
+                optionals << "#{optional_name} = #{block_for_level}"
+                @opt_segment_stack.pop
               end
             end
           end
@@ -215,7 +220,7 @@ module Merb
             bits << case
               when segment.is_a?(String) then segment
               when segment.is_a?(Symbol) then '#{param_for_route(cached_' + segment.to_s + ')}'
-              when segment.is_a?(Array) && segment.any? { |s| !s.is_a?(String) } then '#{' + "_optional_segments_#{segment.object_id}" +'}'
+              when segment.is_a?(Array) && segment.any? { |s| !s.is_a?(String) } then "\#{#{@opt_segment_stack.last.shift}}"
               else ""
             end
           end
